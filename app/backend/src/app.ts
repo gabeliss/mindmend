@@ -116,9 +116,8 @@ class App {
   }
 
   private initializeRoutes(): void {
-    // Root API routes
+    // Root API routes (health check, status)
     this.app.use('/', apiRoutes);
-    this.app.use('/api', apiRoutes);
 
     // Authentication routes
     this.app.use('/api/auth', authRoutes);
