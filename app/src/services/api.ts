@@ -261,6 +261,10 @@ class ApiClient {
     });
   }
 
+  async getTodayEvents(): Promise<ApiResponse<{events: HabitEvent[], summary: any}>> {
+    return this.makeRequest<{events: HabitEvent[], summary: any}>('/habit-events/today');
+  }
+
   // Streak methods
   async getStreaks(): Promise<ApiResponse<{habitStreaks: any[]}>> {
     return this.makeRequest<{habitStreaks: any[]}>('/streaks');

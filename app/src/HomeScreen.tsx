@@ -95,10 +95,7 @@ export default function HomeScreen() {
       const [habitsResponse, streaksResponse, todaysEventsResponse] = await Promise.all([
         apiClient.getHabits(),
         apiClient.getStreaks(),
-        apiClient.getHabitEvents({
-          startDate: new Date().toISOString().split('T')[0],
-          endDate: new Date().toISOString().split('T')[0],
-        }),
+        apiClient.getTodayEvents(),
       ]);
 
       if (isApiError(habitsResponse)) {
@@ -108,8 +105,6 @@ export default function HomeScreen() {
       const habitsData = habitsResponse.data?.habits || [];
       const streaksData = streaksResponse.data?.habitStreaks || [];
       const eventsData = todaysEventsResponse.data?.events || [];
-      
-      console.log('API Response - todaysEventsResponse:', todaysEventsResponse);
 
       // Create a map of habit IDs to streaks
       const streakMap = new Map<string, any>();
@@ -179,6 +174,32 @@ export default function HomeScreen() {
       setIsLoading(false);
     }
   }, [isAuthenticated, user]);
+
+  // Refresh just the streaks without affecting visual state
+  const refreshStreaks = useCallback(async () => {
+    try {
+      const streaksResponse = await apiClient.getStreaks();
+      if (!isApiError(streaksResponse)) {
+        const streaksData = streaksResponse.data?.habitStreaks || [];
+        
+        // Create a map of habit IDs to streaks
+        const streakMap = new Map<string, any>();
+        streaksData.forEach((streak: any) => {
+          streakMap.set(streak.habitId, streak);
+        });
+
+        // Update just the streak values in our habits
+        setHabits(prevHabits => 
+          prevHabits.map(habit => ({
+            ...habit,
+            streak: streakMap.get(habit.id)?.currentStreak || 0
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Failed to refresh streaks:', error);
+    }
+  }, []);
 
   // Complete or avoid a habit
   const toggleHabitCompletion = useCallback(async (habitId: string, habitType: 'BUILD' | 'AVOID') => {
@@ -269,15 +290,14 @@ export default function HomeScreen() {
         }
       }
 
-      // For now, don't reload all habits - just keep the optimistic update
-      // Later we can refresh streaks separately if needed
-      // await loadHabits();
+      // Refresh streaks to keep them updated without affecting visual state
+      await refreshStreaks();
 
     } catch (error) {
       console.error('Failed to toggle habit completion:', error);
       Alert.alert('Error', 'Failed to update habit. Please try again.');
     }
-  }, [habits, animatedValues, loadHabits]);
+  }, [habits, animatedValues, refreshStreaks]);
 
   // Create a new habit
   const createHabit = useCallback(async () => {

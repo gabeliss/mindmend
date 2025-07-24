@@ -9,6 +9,7 @@ import {
   Alert,
   RefreshControl 
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from './services/auth';
 import { apiClient, Streak, isApiError, handleApiError } from './services/api';
 
@@ -69,6 +70,7 @@ export default function StreaksScreen() {
       const streaksData = streaksResponse.data?.habitStreaks || [];
       const habitsData = habitsResponse.data?.habits || [];
 
+
       // Create a map of habit IDs to habits
       const habitMap = new Map();
       habitsData.forEach((habit: any) => {
@@ -89,6 +91,7 @@ export default function StreaksScreen() {
 
       // Generate milestones
       const milestonesData = generateMilestones(streaksData, stats);
+
       setMilestones(milestonesData);
 
     } catch (error) {
@@ -105,6 +108,7 @@ export default function StreaksScreen() {
 
   // Calculate comprehensive streak statistics
   const calculateStreakStats = (streaksData: any[]): StreakStats => {
+    
     if (streaksData.length === 0) {
       return {
         totalStreaks: 0,
@@ -115,11 +119,13 @@ export default function StreaksScreen() {
       };
     }
 
-    const activeStreaks = streaksData.filter(s => s && s.isActive && s.currentStreak > 0).length;
+    const activeStreaks = streaksData.filter(s => s && s.currentStreak > 0).length;
     const totalCurrent = streaksData.reduce((sum, s) => sum + (s?.currentStreak || 0), 0);
     const longestEver = streaksData.length > 0 ? Math.max(...streaksData.map(s => s?.longestStreak || 0)) : 0;
     const averageStreak = streaksData.length > 0 ? totalCurrent / streaksData.length : 0;
-    const totalDays = streaksData.reduce((sum, s) => sum + (s?.longestStreak || 0), 0);
+    const totalDays = streaksData.reduce((sum, s) => sum + (s?.currentStreak || 0), 0);
+
+
 
     return {
       totalStreaks: streaksData.length,
@@ -172,7 +178,7 @@ export default function StreaksScreen() {
       {
         id: '5',
         title: 'Century Club',
-        description: 'Log 100 total habit days',
+        description: 'Log 100 total habits',
         target: 100,
         current: stats.totalDaysLogged,
         achieved: stats.totalDaysLogged >= 100,
@@ -223,6 +229,15 @@ export default function StreaksScreen() {
     }
   }, [isAuthenticated, user, loadStreaks]);
 
+  // Refresh data when screen comes into focus (e.g., navigating back from HomeScreen)
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated && user) {
+        loadStreaks();
+      }
+    }, [isAuthenticated, user, loadStreaks])
+  );
+
   // Render stats overview
   const renderStatsOverview = () => (
     <View style={styles.statsContainer}>
@@ -242,7 +257,7 @@ export default function StreaksScreen() {
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{streakStats.totalDaysLogged}</Text>
-          <Text style={styles.statLabel}>Total Days</Text>
+          <Text style={styles.statLabel}>Active Days</Text>
         </View>
       </View>
     </View>
