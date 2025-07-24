@@ -9,7 +9,10 @@ import {
   Animated, 
   ActivityIndicator,
   Alert,
-  RefreshControl 
+  RefreshControl,
+  Modal,
+  TextInput,
+  Switch
 } from 'react-native';
 import { Colors, Typography, CoachingCopy, Spacing, BorderRadius, Shadows } from './lib/design-system';
 import { useAuth } from './services/auth';
@@ -20,6 +23,7 @@ interface HabitWithStreak extends Habit {
   completedToday?: boolean;
   suggestedTime?: string;
   isOverdue?: boolean;
+  todayEventId?: string; // Store the event ID for today's completion to enable uncompleting
 }
 
 interface TodaysProgress {
@@ -41,6 +45,13 @@ export default function HomeScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [animatedValues, setAnimatedValues] = useState<{ [key: string]: Animated.Value }>({});
   const [dailyInsight, setDailyInsight] = useState<string>('');
+  
+  // Add Habit Modal State
+  const [showAddHabitModal, setShowAddHabitModal] = useState(false);
+  const [newHabitTitle, setNewHabitTitle] = useState('');
+  const [newHabitDescription, setNewHabitDescription] = useState('');
+  const [newHabitType, setNewHabitType] = useState<'BUILD' | 'AVOID'>('BUILD');
+  const [isCreatingHabit, setIsCreatingHabit] = useState(false);
 
   // Initialize animated values when habits change
   useEffect(() => {
@@ -97,6 +108,8 @@ export default function HomeScreen() {
       const habitsData = habitsResponse.data?.habits || [];
       const streaksData = streaksResponse.data?.habitStreaks || [];
       const eventsData = todaysEventsResponse.data?.events || [];
+      
+      console.log('API Response - todaysEventsResponse:', todaysEventsResponse);
 
       // Create a map of habit IDs to streaks
       const streakMap = new Map<string, any>();
@@ -104,18 +117,21 @@ export default function HomeScreen() {
         streakMap.set(streak.habitId, streak);
       });
 
-      // Create a map of completed habits today
-      const completedToday = new Set<string>();
+      // Create a map of completed habits today with their event IDs
+      const completedToday = new Map<string, string>();
+      console.log('Today\'s events:', eventsData);
       eventsData.forEach((event: any) => {
         if (event.eventType === 'COMPLETED') {
-          completedToday.add(event.habitId);
+          completedToday.set(event.habitId, event.id);
         }
       });
+      console.log('Completed today map:', Array.from(completedToday.entries()));
 
       // Combine habits with their streak data and completion status
       const habitsWithStreak: HabitWithStreak[] = habitsData.map((habit: any) => {
         const streak = streakMap.get(habit.id);
-        const completedTodayFlag = completedToday.has(habit.id);
+        const todayEventId = completedToday.get(habit.id);
+        const completedTodayFlag = !!todayEventId;
         
         // Generate suggested times based on habit type and title
         let suggestedTime = '';
@@ -134,6 +150,7 @@ export default function HomeScreen() {
           ...habit,
           streak: streak?.currentStreak || 0,
           completedToday: completedTodayFlag,
+          todayEventId,
           suggestedTime,
           isOverdue: false, // Simplified for now
         };
@@ -164,13 +181,22 @@ export default function HomeScreen() {
   }, [isAuthenticated, user]);
 
   // Complete or avoid a habit
-  const toggleHabitCompletion = useCallback(async (habitId: string, habitType: 'BUILD' | 'BREAK') => {
+  const toggleHabitCompletion = useCallback(async (habitId: string, habitType: 'BUILD' | 'AVOID') => {
     try {
+      const currentHabit = habits.find(h => h.id === habitId);
+      if (!currentHabit) return;
+
+      const isCurrentlyCompleted = currentHabit.completedToday;
+
       // Optimistic update
       setHabits(prevHabits => 
         prevHabits.map(habit => 
           habit.id === habitId 
-            ? { ...habit, completedToday: !habit.completedToday }
+            ? { 
+                ...habit, 
+                completedToday: !habit.completedToday,
+                todayEventId: !habit.completedToday ? 'temp' : undefined
+              }
             : habit
         )
       );
@@ -195,33 +221,101 @@ export default function HomeScreen() {
       // Vibrate for tactile feedback
       Vibration.vibrate(50);
 
-      // Log habit event in backend
-      const response = await apiClient.logHabitEvent({
-        habitId,
-        eventType: 'COMPLETED',
-        notes: habitType === 'BREAK' ? 'Successfully avoided' : 'Completed habit',
-      });
+      if (isCurrentlyCompleted && currentHabit.todayEventId) {
+        // Uncomplete: Delete the existing event
+        const response = await apiClient.deleteHabitEvent(currentHabit.todayEventId);
+        
+        if (isApiError(response)) {
+          // Revert optimistic update on error
+          setHabits(prevHabits => 
+            prevHabits.map(habit => 
+              habit.id === habitId 
+                ? { ...habit, completedToday: true, todayEventId: currentHabit.todayEventId }
+                : habit
+            )
+          );
+          throw new Error(handleApiError(response));
+        }
+      } else {
+        // Complete: Log habit event in backend
+        const response = await apiClient.logHabitEvent({
+          habitId,
+          eventType: 'COMPLETED',
+          notes: habitType === 'AVOID' ? 'Successfully avoided' : 'Completed habit',
+        });
 
-      if (isApiError(response)) {
-        // Revert optimistic update on error
-        setHabits(prevHabits => 
-          prevHabits.map(habit => 
-            habit.id === habitId 
-              ? { ...habit, completedToday: !habit.completedToday }
-              : habit
-          )
-        );
-        throw new Error(handleApiError(response));
+        if (isApiError(response)) {
+          // Revert optimistic update on error
+          setHabits(prevHabits => 
+            prevHabits.map(habit => 
+              habit.id === habitId 
+                ? { ...habit, completedToday: false, todayEventId: undefined }
+                : habit
+            )
+          );
+          throw new Error(handleApiError(response));
+        }
+
+        // Update with the real event ID from the response
+        const newEventId = response.data?.id;
+        if (newEventId) {
+          setHabits(prevHabits => 
+            prevHabits.map(habit => 
+              habit.id === habitId 
+                ? { ...habit, todayEventId: newEventId }
+                : habit
+            )
+          );
+        }
       }
 
-      // Reload habits to get updated streak information
-      await loadHabits();
+      // For now, don't reload all habits - just keep the optimistic update
+      // Later we can refresh streaks separately if needed
+      // await loadHabits();
 
     } catch (error) {
       console.error('Failed to toggle habit completion:', error);
       Alert.alert('Error', 'Failed to update habit. Please try again.');
     }
-  }, [animatedValues, loadHabits]);
+  }, [habits, animatedValues, loadHabits]);
+
+  // Create a new habit
+  const createHabit = useCallback(async () => {
+    if (!newHabitTitle.trim()) {
+      Alert.alert('Error', 'Please enter a habit title');
+      return;
+    }
+
+    try {
+      setIsCreatingHabit(true);
+      
+      const response = await apiClient.createHabit({
+        title: newHabitTitle.trim(),
+        description: newHabitDescription.trim() || undefined,
+        habitType: newHabitType,
+      });
+
+      if (isApiError(response)) {
+        throw new Error(handleApiError(response));
+      }
+
+      // Reset form
+      setNewHabitTitle('');
+      setNewHabitDescription('');
+      setNewHabitType('BUILD');
+      setShowAddHabitModal(false);
+
+      // Reload habits to show the new one
+      await loadHabits();
+
+      Alert.alert('Success', 'Habit created successfully!');
+    } catch (error) {
+      console.error('Failed to create habit:', error);
+      Alert.alert('Error', 'Failed to create habit. Please try again.');
+    } finally {
+      setIsCreatingHabit(false);
+    }
+  }, [newHabitTitle, newHabitDescription, newHabitType, loadHabits]);
 
   // Load habits when authenticated
   useEffect(() => {
@@ -229,6 +323,22 @@ export default function HomeScreen() {
       loadHabits();
     }
   }, [isAuthenticated, user, loadHabits]);
+
+  // Update progress when habits change
+  useEffect(() => {
+    const completed = habits.filter(h => h.completedToday).length;
+    const total = habits.length;
+    const avgStreak = total > 0 
+      ? Math.round(habits.reduce((sum, h) => sum + (h.streak || 0), 0) / total)
+      : 0;
+
+    setTodaysProgress({
+      completedHabits: completed,
+      totalHabits: total,
+      currentStreak: avgStreak,
+      motivationalMessage: getMotivationalMessage(completed, total, avgStreak),
+    });
+  }, [habits]);
 
   // Show loading state
   if (authLoading) {
@@ -251,6 +361,9 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {user?.displayName && (
+        <Text style={styles.welcomeText}>Welcome back, {user.displayName}! 👋</Text>
+      )}
       <Text style={styles.header}>{CoachingCopy.headers.todaysPlan}</Text>
       
       {/* Progress Summary */}
@@ -288,7 +401,17 @@ export default function HomeScreen() {
             <Text style={styles.emptyStateText}>
               No habits yet! Add some habits to get started.
             </Text>
+            <TouchableOpacity style={styles.addHabitButton} onPress={() => setShowAddHabitModal(true)}>
+              <Text style={styles.addHabitButtonText}>+ Add Your First Habit</Text>
+            </TouchableOpacity>
           </View>
+        )}
+        ListFooterComponent={() => (
+          habits.length > 0 ? (
+            <TouchableOpacity style={styles.addHabitButton} onPress={() => setShowAddHabitModal(true)}>
+              <Text style={styles.addHabitButtonText}>+ Add Another Habit</Text>
+            </TouchableOpacity>
+          ) : null
         )}
         renderItem={({ item }) => {
           const isCompleted = item.completedToday || false;
@@ -300,11 +423,12 @@ export default function HomeScreen() {
                 styles.habitRow,
                 item.habitType === 'BUILD' ? styles.buildHabit : styles.breakHabit,
                 isOverdue && styles.overdueHabit,
+                isCompleted && styles.habitRowCompleted,
                 { transform: [{ scale: animatedValues[item.id] || new Animated.Value(1) }] }
               ]}
             >
               <Text style={styles.habitIcon}>
-                {item.habitType === 'BUILD' ? '✅' : '🚫'}
+                {item.habitType === 'BUILD' ? '💪' : '🚫'}
               </Text>
               
               {item.habitType === 'BUILD' ? (
@@ -334,19 +458,91 @@ export default function HomeScreen() {
                   </Text>
                   {item.streak && item.streak > 0 && (
                     <View style={styles.streakBadge}>
-                      <Text style={styles.streakText}>🔥{item.streak}</Text>
+                      <Text style={styles.streakText}>🔥 {item.streak} day{item.streak > 1 ? 's' : ''}</Text>
                     </View>
                   )}
                 </View>
                 <Text style={styles.habitDescription}>{item.description}</Text>
                 <Text style={[styles.habitTime, isOverdue && styles.habitTimeOverdue]}>
-                  {item.suggestedTime}{isOverdue && ' (Missed)'}
+                  {`${item.suggestedTime}${isOverdue ? ' (Missed)' : ''}`}
                 </Text>
               </View>
             </Animated.View>
           );
         }}
       />
+
+      {/* Add Habit Modal */}
+      <Modal
+        visible={showAddHabitModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAddHabitModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowAddHabitModal(false)}>
+              <Text style={styles.modalCancelButton}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Add New Habit</Text>
+            <TouchableOpacity onPress={createHabit} disabled={isCreatingHabit}>
+              <Text style={[styles.modalSaveButton, isCreatingHabit && styles.modalButtonDisabled]}>
+                {isCreatingHabit ? 'Creating...' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalContent}>
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Habit Type</Text>
+              <View style={styles.habitTypeContainer}>
+                <TouchableOpacity 
+                  style={[styles.habitTypeButton, newHabitType === 'BUILD' && styles.habitTypeButtonActive]}
+                  onPress={() => setNewHabitType('BUILD')}
+                >
+                  <Text style={[styles.habitTypeButtonText, newHabitType === 'BUILD' && styles.habitTypeButtonTextActive]}>
+                    ✅ Build Good Habit
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.habitTypeButton, newHabitType === 'AVOID' && styles.habitTypeButtonActive]}
+                  onPress={() => setNewHabitType('AVOID')}
+                >
+                  <Text style={[styles.habitTypeButtonText, newHabitType === 'AVOID' && styles.habitTypeButtonTextActive]}>
+                    🚫 Break Bad Habit
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Habit Title *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newHabitTitle}
+                onChangeText={setNewHabitTitle}
+                placeholder="e.g., Exercise for 30 minutes"
+                placeholderTextColor="#9CA3AF"
+                maxLength={100}
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Description (Optional)</Text>
+              <TextInput
+                style={[styles.textInput, styles.textAreaInput]}
+                value={newHabitDescription}
+                onChangeText={setNewHabitDescription}
+                placeholder="Add more details about your habit..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+                maxLength={500}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -360,6 +556,12 @@ const styles = StyleSheet.create({
   centerContent: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  welcomeText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4F8EF7',
+    marginBottom: 8,
   },
   header: { 
     fontSize: 24, 
@@ -538,5 +740,105 @@ const styles = StyleSheet.create({
   habitTimeOverdue: {
     color: '#EF4444',
     fontWeight: '600',
+  },
+  habitRowCompleted: {
+    backgroundColor: '#F0FDF4',
+    opacity: 0.9,
+  },
+  addHabitButton: {
+    backgroundColor: '#4F8EF7',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+    marginHorizontal: 20,
+  },
+  addHabitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  modalCancelButton: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  modalSaveButton: {
+    fontSize: 16,
+    color: '#4F8EF7',
+    fontWeight: '600',
+  },
+  modalButtonDisabled: {
+    opacity: 0.5,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  formGroup: {
+    marginBottom: 24,
+  },
+  formLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  habitTypeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  habitTypeButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  habitTypeButtonActive: {
+    borderColor: '#4F8EF7',
+    backgroundColor: '#EBF4FF',
+  },
+  habitTypeButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  habitTypeButtonTextActive: {
+    color: '#4F8EF7',
+    fontWeight: '600',
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#1F2937',
+    backgroundColor: '#fff',
+  },
+  textAreaInput: {
+    height: 80,
+    textAlignVertical: 'top',
   },
 });

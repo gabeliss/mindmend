@@ -28,7 +28,7 @@ export interface Habit {
   userId: string;
   title: string;
   description?: string;
-  habitType: 'BUILD' | 'BREAK';
+  habitType: 'BUILD' | 'AVOID';
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -201,7 +201,7 @@ class ApiClient {
   async createHabit(habitData: {
     title: string;
     description?: string;
-    habitType: 'BUILD' | 'BREAK';
+    habitType: 'BUILD' | 'AVOID';
   }): Promise<ApiResponse<Habit>> {
     return this.makeRequest<Habit>('/habits', {
       method: 'POST',
@@ -253,6 +253,12 @@ class ApiClient {
     const endpoint = queryString ? `/habit-events?${queryString}` : '/habit-events';
     
     return this.makeRequest<{events: HabitEvent[], pagination: any}>(endpoint);
+  }
+
+  async deleteHabitEvent(eventId: string): Promise<ApiResponse<void>> {
+    return this.makeRequest<void>(`/habit-events/event/${eventId}`, {
+      method: 'DELETE',
+    });
   }
 
   // Streak methods
