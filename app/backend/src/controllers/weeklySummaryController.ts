@@ -16,20 +16,20 @@ export class WeeklySummaryController {
 
       // Validate weekOffset
       if (options.weekOffset !== undefined && (options.weekOffset < 0 || options.weekOffset > 12)) {
-        res.status(400).json(errorResponse('Week offset must be between 0 and 12'));
+        errorResponse(res, 'Week offset must be between 0 and 12', 400);
         return;
       }
 
       const summary = await weeklySummaryService.generateWeeklySummary(userId, options);
       
-      res.status(201).json(successResponse(summary, 'Weekly summary generated successfully'));
+      successResponse(res, summary, 'Weekly summary generated successfully', 201);
     } catch (error) {
       console.error('Error generating weekly summary:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to generate weekly summary'));
+        errorResponse(res, 'Failed to generate weekly summary', 500);
       }
     }
   }
@@ -41,25 +41,25 @@ export class WeeklySummaryController {
 
       // Validate weekOffset
       if (weekOffset < 0 || weekOffset > 12) {
-        res.status(400).json(errorResponse('Week offset must be between 0 and 12'));
+        errorResponse(res, 'Week offset must be between 0 and 12', 400);
         return;
       }
 
       const summary = await weeklySummaryService.getWeeklySummary(userId, weekOffset);
       
       if (!summary) {
-        res.status(404).json(errorResponse('Weekly summary not found'));
+        errorResponse(res, 'Weekly summary not found', 404);
         return;
       }
 
-      res.json(successResponse(summary, 'Weekly summary retrieved successfully'));
+      successResponse(res, summary, 'Weekly summary retrieved successfully');
     } catch (error) {
       console.error('Error getting weekly summary:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve weekly summary'));
+        errorResponse(res, 'Failed to retrieve weekly summary', 500);
       }
     }
   }
@@ -71,20 +71,20 @@ export class WeeklySummaryController {
 
       // Validate limit
       if (limit < 1 || limit > 52) {
-        res.status(400).json(errorResponse('Limit must be between 1 and 52'));
+        errorResponse(res, 'Limit must be between 1 and 52', 400);
         return;
       }
 
       const summaries = await weeklySummaryService.getUserWeeklySummaries(userId, limit);
       
-      res.json(successResponse(summaries, 'Weekly summaries retrieved successfully'));
+      successResponse(res, summaries, 'Weekly summaries retrieved successfully');
     } catch (error) {
       console.error('Error getting user weekly summaries:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve weekly summaries'));
+        errorResponse(res, 'Failed to retrieve weekly summaries', 500);
       }
     }
   }
@@ -100,18 +100,18 @@ export class WeeklySummaryController {
         const newSummary = await weeklySummaryService.generateWeeklySummary(userId, {
           includeComparison: true,
         });
-        res.status(201).json(successResponse(newSummary, 'Current week summary generated'));
+        successResponse(res, newSummary, 'Current week summary generated', 201);
         return;
       }
 
-      res.json(successResponse(summary, 'Current week summary retrieved successfully'));
+      successResponse(res, summary, 'Current week summary retrieved successfully');
     } catch (error) {
       console.error('Error getting current week summary:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve current week summary'));
+        errorResponse(res, 'Failed to retrieve current week summary', 500);
       }
     }
   }
@@ -129,18 +129,18 @@ export class WeeklySummaryController {
           includeComparison: true,
           includePredictions: true,
         });
-        res.status(201).json(successResponse(newSummary, 'Last week summary generated'));
+        successResponse(res, newSummary, 'Last week summary generated', 201);
         return;
       }
 
-      res.json(successResponse(summary, 'Last week summary retrieved successfully'));
+      successResponse(res, summary, 'Last week summary retrieved successfully');
     } catch (error) {
       console.error('Error getting last week summary:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve last week summary'));
+        errorResponse(res, 'Failed to retrieve last week summary', 500);
       }
     }
   }
@@ -153,18 +153,18 @@ export class WeeklySummaryController {
       const summary = await weeklySummaryService.getWeeklySummary(userId, weekOffset);
       
       if (!summary) {
-        res.status(404).json(errorResponse('Weekly summary not found'));
+        errorResponse(res, 'Weekly summary not found', 404);
         return;
       }
 
-      res.json(successResponse(summary.achievements, 'Weekly achievements retrieved successfully'));
+      successResponse(res, summary.achievements, 'Weekly achievements retrieved successfully');
     } catch (error) {
       console.error('Error getting weekly achievements:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve weekly achievements'));
+        errorResponse(res, 'Failed to retrieve weekly achievements', 500);
       }
     }
   }
@@ -177,18 +177,18 @@ export class WeeklySummaryController {
       const summary = await weeklySummaryService.getWeeklySummary(userId, weekOffset);
       
       if (!summary) {
-        res.status(404).json(errorResponse('Weekly summary not found'));
+        errorResponse(res, 'Weekly summary not found', 404);
         return;
       }
 
-      res.json(successResponse(summary.insights, 'Weekly insights retrieved successfully'));
+      successResponse(res, summary.insights, 'Weekly insights retrieved successfully');
     } catch (error) {
       console.error('Error getting weekly insights:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve weekly insights'));
+        errorResponse(res, 'Failed to retrieve weekly insights', 500);
       }
     }
   }
@@ -201,18 +201,18 @@ export class WeeklySummaryController {
       const summary = await weeklySummaryService.getWeeklySummary(userId, weekOffset);
       
       if (!summary) {
-        res.status(404).json(errorResponse('Weekly summary not found'));
+        errorResponse(res, 'Weekly summary not found', 404);
         return;
       }
 
-      res.json(successResponse(summary.recommendations, 'Weekly recommendations retrieved successfully'));
+      successResponse(res, summary.recommendations, 'Weekly recommendations retrieved successfully');
     } catch (error) {
       console.error('Error getting weekly recommendations:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve weekly recommendations'));
+        errorResponse(res, 'Failed to retrieve weekly recommendations', 500);
       }
     }
   }
@@ -225,7 +225,7 @@ export class WeeklySummaryController {
       const summary = await weeklySummaryService.getWeeklySummary(userId, weekOffset);
       
       if (!summary) {
-        res.status(404).json(errorResponse('Weekly summary not found'));
+        errorResponse(res, 'Weekly summary not found', 404);
         return;
       }
 
@@ -236,14 +236,14 @@ export class WeeklySummaryController {
         comparison: summary.comparison,
       };
 
-      res.json(successResponse(response, 'Weekly statistics retrieved successfully'));
+      successResponse(res, response, 'Weekly statistics retrieved successfully');
     } catch (error) {
       console.error('Error getting weekly statistics:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve weekly statistics'));
+        errorResponse(res, 'Failed to retrieve weekly statistics', 500);
       }
     }
   }
@@ -262,20 +262,20 @@ export class WeeklySummaryController {
 
       // Validate weekOffset
       if (options.weekOffset !== undefined && (options.weekOffset < 0 || options.weekOffset > 12)) {
-        res.status(400).json(errorResponse('Week offset must be between 0 and 12'));
+        errorResponse(res, 'Week offset must be between 0 and 12', 400);
         return;
       }
 
       const summary = await weeklySummaryService.generateWeeklySummary(userId, options);
       
-      res.status(201).json(successResponse(summary, 'Weekly summary regenerated successfully'));
+      successResponse(res, summary, 'Weekly summary regenerated successfully', 201);
     } catch (error) {
       console.error('Error regenerating weekly summary:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to regenerate weekly summary'));
+        errorResponse(res, 'Failed to regenerate weekly summary', 500);
       }
     }
   }

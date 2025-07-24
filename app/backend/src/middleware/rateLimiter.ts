@@ -104,6 +104,9 @@ export const createUserRateLimit = (maxRequests: number, windowMs: number) => {
   });
 };
 
+// Alias for backward compatibility
+export const rateLimiter = aiRateLimit;
+
 // Cleanup old entries periodically
 setInterval(() => {
   const now = Date.now();

@@ -381,3 +381,6 @@ export class StreakService {
     }
   }
 }
+
+// Instance export for backward compatibility
+export const streakService = StreakService;

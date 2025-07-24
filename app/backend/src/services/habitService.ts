@@ -396,3 +396,6 @@ export class HabitService {
     }
   }
 }
+
+// Instance export for backward compatibility
+export const habitService = HabitService;

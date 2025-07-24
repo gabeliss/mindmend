@@ -14,25 +14,25 @@ export class AIInsightController {
 
       // Validate insightTypes if provided
       if (options.insightTypes) {
-        const validTypes = ['daily_tip', 'pattern_detected', 'weekly_summary'];
+        const validTypes = ['DAILY_TIP', 'PATTERN_DETECTED', 'WEEKLY_SUMMARY'];
         const invalidTypes = options.insightTypes.filter(type => !validTypes.includes(type));
         
         if (invalidTypes.length > 0) {
-          res.status(400).json(errorResponse(`Invalid insight types: ${invalidTypes.join(', ')}`));
+          errorResponse(res, `Invalid insight types: ${invalidTypes.join(', ')}`, 400);
           return;
         }
       }
 
       const insights = await aiInsightService.generateDailyInsights(userId, options);
       
-      res.status(201).json(successResponse(insights, 'Daily insights generated successfully'));
+      successResponse(res, insights, 'Daily insights generated successfully', 201);
     } catch (error) {
       console.error('Error generating daily insights:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to generate daily insights'));
+        errorResponse(res, 'Failed to generate daily insights', 500);
       }
     }
   }
@@ -44,18 +44,18 @@ export class AIInsightController {
       const insight = await aiInsightService.generateWeeklyInsight(userId);
       
       if (!insight) {
-        res.status(200).json(successResponse(null, 'No data available for weekly insight generation'));
+        successResponse(res, null, 'No data available for weekly insight generation', 200);
         return;
       }
 
-      res.status(201).json(successResponse(insight, 'Weekly insight generated successfully'));
+      successResponse(res, insight, 'Weekly insight generated successfully', 201);
     } catch (error) {
       console.error('Error generating weekly insight:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to generate weekly insight'));
+        errorResponse(res, 'Failed to generate weekly insight', 500);
       }
     }
   }
@@ -71,31 +71,31 @@ export class AIInsightController {
 
       // Validate limit
       if (options.limit && (options.limit < 1 || options.limit > 100)) {
-        res.status(400).json(errorResponse('Limit must be between 1 and 100'));
+        errorResponse(res, 'Limit must be between 1 and 100', 400);
         return;
       }
 
       // Validate types if provided
       if (options.types) {
-        const validTypes = ['daily_tip', 'pattern_detected', 'weekly_summary'];
-        const invalidTypes = options.types.filter(type => !validTypes.includes(type));
+        const validTypes = ['DAILY_TIP', 'PATTERN_DETECTED', 'WEEKLY_SUMMARY'];
+        const invalidTypes = options.types.filter((type: string) => !validTypes.includes(type));
         
         if (invalidTypes.length > 0) {
-          res.status(400).json(errorResponse(`Invalid insight types: ${invalidTypes.join(', ')}`));
+          errorResponse(res, `Invalid insight types: ${invalidTypes.join(', ')}`, 400);
           return;
         }
       }
 
       const insights = await aiInsightService.getUserInsights(userId, options);
       
-      res.json(successResponse(insights, 'User insights retrieved successfully'));
+      successResponse(res, insights, 'User insights retrieved successfully');
     } catch (error) {
       console.error('Error getting user insights:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve user insights'));
+        errorResponse(res, 'Failed to retrieve user insights', 500);
       }
     }
   }
@@ -106,7 +106,7 @@ export class AIInsightController {
       const insightId = req.params.id;
 
       if (!insightId) {
-        res.status(400).json(errorResponse('Insight ID is required'));
+        errorResponse(res, 'Insight ID is required', 400);
         return;
       }
 
@@ -115,18 +115,18 @@ export class AIInsightController {
       const insight = insights.find(i => i.id === insightId);
 
       if (!insight) {
-        res.status(404).json(errorResponse('Insight not found'));
+        errorResponse(res, 'Insight not found', 404);
         return;
       }
 
-      res.json(successResponse(insight, 'Insight retrieved successfully'));
+      successResponse(res, insight, 'Insight retrieved successfully');
     } catch (error) {
       console.error('Error getting insight by ID:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve insight'));
+        errorResponse(res, 'Failed to retrieve insight', 500);
       }
     }
   }
@@ -137,20 +137,20 @@ export class AIInsightController {
       const insightId = req.params.id;
 
       if (!insightId) {
-        res.status(400).json(errorResponse('Insight ID is required'));
+        errorResponse(res, 'Insight ID is required', 400);
         return;
       }
 
       await aiInsightService.markInsightAsShown(userId, insightId);
       
-      res.json(successResponse(null, 'Insight marked as shown successfully'));
+      successResponse(res, null, 'Insight marked as shown successfully');
     } catch (error) {
       console.error('Error marking insight as shown:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to mark insight as shown'));
+        errorResponse(res, 'Failed to mark insight as shown', 500);
       }
     }
   }
@@ -163,7 +163,7 @@ export class AIInsightController {
       const insights = await aiInsightService.getUserInsights(userId, {
         limit: 10,
         onlyUnshown: true,
-        types: ['daily_tip', 'pattern_detected'],
+        types: ['DAILY_TIP', 'PATTERN_DETECTED'],
       });
 
       // Filter to only today's insights
@@ -176,14 +176,14 @@ export class AIInsightController {
         return insightDate.getTime() === today.getTime();
       });
 
-      res.json(successResponse(todaysInsights, "Today's insights retrieved successfully"));
+      successResponse(res, todaysInsights, "Today's insights retrieved successfully");
     } catch (error) {
       console.error('Error getting today\'s insights:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve today\'s insights'));
+        errorResponse(res, 'Failed to retrieve today\'s insights', 500);
       }
     }
   }
@@ -194,19 +194,19 @@ export class AIInsightController {
 
       const insights = await aiInsightService.getUserInsights(userId, {
         limit: 1,
-        types: ['weekly_summary'],
+        types: ['WEEKLY_SUMMARY'],
       });
 
       const latestWeekly = insights.length > 0 ? insights[0] : null;
 
-      res.json(successResponse(latestWeekly, 'Latest weekly insight retrieved successfully'));
+      successResponse(res, latestWeekly, 'Latest weekly insight retrieved successfully');
     } catch (error) {
       console.error('Error getting latest weekly insight:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to retrieve latest weekly insight'));
+        errorResponse(res, 'Failed to retrieve latest weekly insight', 500);
       }
     }
   }
@@ -217,27 +217,27 @@ export class AIInsightController {
       const { type } = req.body;
 
       if (!type) {
-        res.status(400).json(errorResponse('Insight type is required'));
+        errorResponse(res, 'Insight type is required', 400);
         return;
       }
 
-      if (type === 'weekly_summary') {
+      if (type === 'WEEKLY_SUMMARY') {
         const insight = await aiInsightService.generateWeeklyInsight(userId);
-        res.status(201).json(successResponse(insight, 'Weekly insight regenerated successfully'));
+        successResponse(res, insight, 'Weekly insight regenerated successfully', 201);
       } else {
         const insights = await aiInsightService.generateDailyInsights(userId, {
           forceRegeneration: true,
           insightTypes: [type],
         });
-        res.status(201).json(successResponse(insights, 'Daily insights regenerated successfully'));
+        successResponse(res, insights, 'Daily insights regenerated successfully', 201);
       }
     } catch (error) {
       console.error('Error regenerating insights:', error);
       
       if (error instanceof AppError) {
-        res.status(error.statusCode).json(errorResponse(error.message));
+        errorResponse(res, error.message, error.statusCode);
       } else {
-        res.status(500).json(errorResponse('Failed to regenerate insights'));
+        errorResponse(res, 'Failed to regenerate insights', 500);
       }
     }
   }

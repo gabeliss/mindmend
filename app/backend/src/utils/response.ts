@@ -57,3 +57,7 @@ export class ResponseHandler {
 }
 
 export default ResponseHandler;
+
+// Convenience exports for backward compatibility
+export const successResponse = ResponseHandler.success;
+export const errorResponse = ResponseHandler.error;

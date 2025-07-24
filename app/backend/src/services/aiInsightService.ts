@@ -1,4 +1,4 @@
-import { PrismaClient, AIInsight, User } from '@prisma/client';
+import { PrismaClient, AIInsight, User, Habit } from '@prisma/client';
 import { aiService, JournalInsightData, WeeklySummaryData } from './aiService';
 import { journalService } from './journalService';
 import { habitService } from './habitService';
@@ -10,12 +10,12 @@ const prisma = new PrismaClient();
 
 export interface InsightGenerationOptions {
   forceRegeneration?: boolean;
-  insightTypes?: ('daily_tip' | 'pattern_detected' | 'weekly_summary')[];
+  insightTypes?: ('DAILY_TIP' | 'PATTERN_DETECTED' | 'WEEKLY_SUMMARY')[];
 }
 
 export interface GeneratedInsight {
   id: string;
-  type: 'daily_tip' | 'pattern_detected' | 'weekly_summary';
+  type: 'DAILY_TIP' | 'PATTERN_DETECTED' | 'WEEKLY_SUMMARY';
   title: string;
   content: string;
   dataUsed: any;
@@ -34,7 +34,7 @@ export class AIInsightService {
       }
 
       const insights: GeneratedInsight[] = [];
-      const typesToGenerate = options.insightTypes || ['daily_tip', 'pattern_detected'];
+      const typesToGenerate = options.insightTypes || ['DAILY_TIP', 'PATTERN_DETECTED'];
 
       // Check for existing insights today unless force regeneration
       if (!options.forceRegeneration) {
@@ -65,7 +65,7 @@ export class AIInsightService {
       const userData = await this.gatherUserData(userId);
 
       // Generate daily tip
-      if (typesToGenerate.includes('daily_tip')) {
+      if (typesToGenerate.includes('DAILY_TIP')) {
         try {
           const dailyTip = await this.generateDailyTip(user, userData);
           if (dailyTip) {
@@ -77,7 +77,7 @@ export class AIInsightService {
       }
 
       // Generate pattern detection
-      if (typesToGenerate.includes('pattern_detected')) {
+      if (typesToGenerate.includes('PATTERN_DETECTED')) {
         try {
           const patternInsight = await this.generatePatternInsight(userId, userData);
           if (patternInsight) {
@@ -111,7 +111,7 @@ export class AIInsightService {
       const existingWeeklySummary = await prisma.aIInsight.findFirst({
         where: {
           userId,
-          insightType: 'weekly_summary',
+          insightType: 'WEEKLY_SUMMARY',
           createdAt: { gte: weekStart },
         },
       });
@@ -120,7 +120,7 @@ export class AIInsightService {
         Logger.info('Weekly summary already exists for this week', { userId });
         return {
           id: existingWeeklySummary.id,
-          type: 'weekly_summary',
+          type: 'WEEKLY_SUMMARY',
           title: existingWeeklySummary.title,
           content: existingWeeklySummary.content,
           dataUsed: existingWeeklySummary.dataUsed,
@@ -145,7 +145,7 @@ export class AIInsightService {
 
       const insight: GeneratedInsight = {
         id: '', // Will be set when stored
-        type: 'weekly_summary',
+        type: 'WEEKLY_SUMMARY',
         title: 'Your Week in Review',
         content: aiResponse.content,
         dataUsed: {
@@ -173,7 +173,7 @@ export class AIInsightService {
     options: {
       limit?: number;
       onlyUnshown?: boolean;
-      types?: ('daily_tip' | 'pattern_detected' | 'weekly_summary')[];
+      types?: ('DAILY_TIP' | 'PATTERN_DETECTED' | 'WEEKLY_SUMMARY')[];
     } = {}
   ): Promise<AIInsight[]> {
     try {
@@ -250,14 +250,14 @@ export class AIInsightService {
       }
 
       const aiResponse = await aiService.generateMotivationalTip(
-        user.coachStyle,
+        user.coachStyle.toLowerCase() as 'supportive' | 'direct' | 'motivational',
         context,
         { userId: user.id }
       );
 
       return {
         id: '',
-        type: 'daily_tip',
+        type: 'DAILY_TIP',
         title: 'Daily Motivation',
         content: aiResponse.content,
         dataUsed: { context, coachStyle: user.coachStyle },
@@ -280,7 +280,7 @@ export class AIInsightService {
 
       return {
         id: '',
-        type: 'pattern_detected',
+        type: 'PATTERN_DETECTED',
         title: 'Pattern Insights',
         content: aiResponse.content,
         dataUsed: {
@@ -311,8 +311,8 @@ export class AIInsightService {
     // Get habit data
     const habits = await habitService.getUserHabits(userId);
     const habitData = await Promise.all(
-      habits.slice(0, 5).map(async (habit) => {
-        const streak = await streakService.getCurrentStreak(userId, habit.id);
+      habits.slice(0, 5).map(async (habit: Habit) => {
+        const streak = await streakService.calculateHabitStreak(habit.id, userId);
         const events = await prisma.habitEvent.findMany({
           where: {
             userId,
@@ -376,7 +376,7 @@ export class AIInsightService {
     let habitCount = 0;
 
     const habitData = await Promise.all(
-      habits.slice(0, 5).map(async (habit) => {
+      habits.slice(0, 5).map(async (habit: Habit) => {
         const events = await prisma.habitEvent.findMany({
           where: {
             userId,
@@ -391,7 +391,7 @@ export class AIInsightService {
         totalCompletionRate += completionRate;
         habitCount++;
 
-        const streak = await streakService.getCurrentStreak(userId, habit.id);
+        const streak = await streakService.calculateHabitStreak(habit.id, userId);
 
         return {
           habitTitle: habit.title,

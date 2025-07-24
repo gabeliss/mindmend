@@ -12,7 +12,7 @@ export class JournalController {
 
       // Validate required fields
       if (!data.content || data.content.trim().length === 0) {
-        res.status(400).json(errorResponse('Content is required'));
+        errorResponse(res, 'Content is required', 400);
         return;
       }
 
@@ -20,17 +20,17 @@ export class JournalController {
       if (data.moodRating !== undefined) {
         const mood = Number(data.moodRating);
         if (isNaN(mood) || mood < 1 || mood > 10) {
-          res.status(400).json(errorResponse('Mood rating must be between 1 and 10'));
+          errorResponse(res, 'Mood rating must be between 1 and 10', 400);
           return;
         }
         data.moodRating = mood;
       }
 
       const entry = await journalService.createEntry(userId, data);
-      res.status(201).json(successResponse(entry, 'Journal entry created successfully'));
+      successResponse(res, entry, 'Journal entry created successfully', 201);
     } catch (error) {
       console.error('Error creating journal entry:', error);
-      res.status(500).json(errorResponse('Failed to create journal entry'));
+      errorResponse(res, 'Failed to create journal entry', 500);
     }
   }
 
@@ -49,42 +49,42 @@ export class JournalController {
 
       // Validate date filters
       if (filters.startDate && isNaN(Date.parse(filters.startDate))) {
-        res.status(400).json(errorResponse('Invalid start date format'));
+        errorResponse(res, 'Invalid start date format', 400);
         return;
       }
 
       if (filters.endDate && isNaN(Date.parse(filters.endDate))) {
-        res.status(400).json(errorResponse('Invalid end date format'));
+        errorResponse(res, 'Invalid end date format', 400);
         return;
       }
 
       // Validate mood rating filters
       if (filters.minMoodRating !== undefined && (filters.minMoodRating < 1 || filters.minMoodRating > 10)) {
-        res.status(400).json(errorResponse('Minimum mood rating must be between 1 and 10'));
+        errorResponse(res, 'Minimum mood rating must be between 1 and 10', 400);
         return;
       }
 
       if (filters.maxMoodRating !== undefined && (filters.maxMoodRating < 1 || filters.maxMoodRating > 10)) {
-        res.status(400).json(errorResponse('Maximum mood rating must be between 1 and 10'));
+        errorResponse(res, 'Maximum mood rating must be between 1 and 10', 400);
         return;
       }
 
       // Validate limit and offset
       if (filters.limit && (filters.limit < 1 || filters.limit > 100)) {
-        res.status(400).json(errorResponse('Limit must be between 1 and 100'));
+        errorResponse(res, 'Limit must be between 1 and 100', 400);
         return;
       }
 
       if (filters.offset && filters.offset < 0) {
-        res.status(400).json(errorResponse('Offset must be non-negative'));
+        errorResponse(res, 'Offset must be non-negative', 400);
         return;
       }
 
       const entries = await journalService.getEntries(userId, filters);
-      res.json(successResponse(entries, 'Journal entries retrieved successfully'));
+      successResponse(res, entries, 'Journal entries retrieved successfully');
     } catch (error) {
       console.error('Error getting journal entries:', error);
-      res.status(500).json(errorResponse('Failed to retrieve journal entries'));
+      errorResponse(res, 'Failed to retrieve journal entries', 500);
     }
   }
 
@@ -94,21 +94,21 @@ export class JournalController {
       const entryId = req.params.id;
 
       if (!entryId) {
-        res.status(400).json(errorResponse('Entry ID is required'));
+        errorResponse(res, 'Entry ID is required', 400);
         return;
       }
 
       const entry = await journalService.getEntryById(userId, entryId);
       
       if (!entry) {
-        res.status(404).json(errorResponse('Journal entry not found'));
+        errorResponse(res, 'Journal entry not found', 404);
         return;
       }
 
-      res.json(successResponse(entry, 'Journal entry retrieved successfully'));
+      successResponse(res, entry, 'Journal entry retrieved successfully');
     } catch (error) {
       console.error('Error getting journal entry:', error);
-      res.status(500).json(errorResponse('Failed to retrieve journal entry'));
+      errorResponse(res, 'Failed to retrieve journal entry', 500);
     }
   }
 
@@ -119,7 +119,7 @@ export class JournalController {
       const data: UpdateJournalEntryData = req.body;
 
       if (!entryId) {
-        res.status(400).json(errorResponse('Entry ID is required'));
+        errorResponse(res, 'Entry ID is required', 400);
         return;
       }
 
@@ -127,7 +127,7 @@ export class JournalController {
       if (data.moodRating !== undefined) {
         const mood = Number(data.moodRating);
         if (isNaN(mood) || mood < 1 || mood > 10) {
-          res.status(400).json(errorResponse('Mood rating must be between 1 and 10'));
+          errorResponse(res, 'Mood rating must be between 1 and 10', 400);
           return;
         }
         data.moodRating = mood;
@@ -135,21 +135,21 @@ export class JournalController {
 
       // Validate content if provided
       if (data.content !== undefined && data.content.trim().length === 0) {
-        res.status(400).json(errorResponse('Content cannot be empty'));
+        errorResponse(res, 'Content cannot be empty', 400);
         return;
       }
 
       const entry = await journalService.updateEntry(userId, entryId, data);
       
       if (!entry) {
-        res.status(404).json(errorResponse('Journal entry not found'));
+        errorResponse(res, 'Journal entry not found', 404);
         return;
       }
 
-      res.json(successResponse(entry, 'Journal entry updated successfully'));
+      successResponse(res, entry, 'Journal entry updated successfully');
     } catch (error) {
       console.error('Error updating journal entry:', error);
-      res.status(500).json(errorResponse('Failed to update journal entry'));
+      errorResponse(res, 'Failed to update journal entry', 500);
     }
   }
 
@@ -159,21 +159,21 @@ export class JournalController {
       const entryId = req.params.id;
 
       if (!entryId) {
-        res.status(400).json(errorResponse('Entry ID is required'));
+        errorResponse(res, 'Entry ID is required', 400);
         return;
       }
 
       const deleted = await journalService.deleteEntry(userId, entryId);
       
       if (!deleted) {
-        res.status(404).json(errorResponse('Journal entry not found'));
+        errorResponse(res, 'Journal entry not found', 404);
         return;
       }
 
-      res.json(successResponse(null, 'Journal entry deleted successfully'));
+      successResponse(res, null, 'Journal entry deleted successfully');
     } catch (error) {
       console.error('Error deleting journal entry:', error);
-      res.status(500).json(errorResponse('Failed to delete journal entry'));
+      errorResponse(res, 'Failed to delete journal entry', 500);
     }
   }
 
@@ -183,21 +183,21 @@ export class JournalController {
       const dateParam = req.params.date;
 
       if (!dateParam) {
-        res.status(400).json(errorResponse('Date is required'));
+        errorResponse(res, 'Date is required', 400);
         return;
       }
 
       const date = new Date(dateParam);
       if (isNaN(date.getTime())) {
-        res.status(400).json(errorResponse('Invalid date format'));
+        errorResponse(res, 'Invalid date format', 400);
         return;
       }
 
       const entries = await journalService.getEntriesByDate(userId, date);
-      res.json(successResponse(entries, 'Journal entries retrieved successfully'));
+      successResponse(res, entries, 'Journal entries retrieved successfully');
     } catch (error) {
       console.error('Error getting journal entries by date:', error);
-      res.status(500).json(errorResponse('Failed to retrieve journal entries'));
+      errorResponse(res, 'Failed to retrieve journal entries', 500);
     }
   }
 
@@ -207,15 +207,15 @@ export class JournalController {
       const days = req.query.days ? Number(req.query.days) : 30;
 
       if (isNaN(days) || days < 1 || days > 365) {
-        res.status(400).json(errorResponse('Days must be between 1 and 365'));
+        errorResponse(res, 'Days must be between 1 and 365', 400);
         return;
       }
 
       const trend = await journalService.getMoodTrend(userId, days);
-      res.json(successResponse(trend, 'Mood trend retrieved successfully'));
+      successResponse(res, trend, 'Mood trend retrieved successfully');
     } catch (error) {
       console.error('Error getting mood trend:', error);
-      res.status(500).json(errorResponse('Failed to retrieve mood trend'));
+      errorResponse(res, 'Failed to retrieve mood trend', 500);
     }
   }
 }

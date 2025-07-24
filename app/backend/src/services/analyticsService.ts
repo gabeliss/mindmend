@@ -466,3 +466,6 @@ export class AnalyticsService {
     };
   }
 }
+
+// Instance export for backward compatibility
+export const analyticsService = AnalyticsService;

@@ -203,6 +203,9 @@ export const requireRole = (role: string) => {
 // Authentication with rate limiting for auth endpoints
 export const authenticateWithRateLimit = [authRateLimit, authenticateToken];
 
+// Alias for backward compatibility
+export const authenticateUser = authenticateToken;
+
 // Logout endpoint handler (revokes refresh tokens)
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
   try {

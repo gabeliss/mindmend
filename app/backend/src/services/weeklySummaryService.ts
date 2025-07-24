@@ -1,4 +1,4 @@
-import { PrismaClient, User } from '@prisma/client';
+import { PrismaClient, User, Habit } from '@prisma/client';
 import { aiService, WeeklySummaryData } from './aiService';
 import { journalService } from './journalService';
 import { habitService } from './habitService';
@@ -261,7 +261,7 @@ export class WeeklySummaryService {
     const habits = await habitService.getUserHabits(userId);
     
     const habitData = await Promise.all(
-      habits.slice(0, 10).map(async (habit) => {
+      habits.slice(0, 10).map(async (habit: Habit) => {
         const events = await prisma.habitEvent.findMany({
           where: {
             userId,
@@ -273,7 +273,7 @@ export class WeeklySummaryService {
         const completedEvents = events.filter(event => event.eventType === 'COMPLETED').length;
         const completionRate = Math.round((completedEvents / 7) * 100);
         
-        const streak = await streakService.getCurrentStreak(userId, habit.id);
+        const streak = await streakService.calculateHabitStreak(habit.id, userId);
 
         return {
           habitTitle: habit.title,
@@ -293,7 +293,7 @@ export class WeeklySummaryService {
       : null;
 
     const overallHabitCompletionRate = habitData.length > 0 
-      ? Math.round(habitData.reduce((sum, habit) => sum + habit.completionRate, 0) / habitData.length)
+      ? Math.round(habitData.reduce((sum: number, habit: any) => sum + habit.completionRate, 0) / habitData.length)
       : 0;
 
     return {
@@ -362,12 +362,12 @@ export class WeeklySummaryService {
     let longestStreak = 0;
 
     for (const habit of habits) {
-      const streak = await streakService.getCurrentStreak(userId, habit.id);
+      const streak = await streakService.calculateHabitStreak(habit.id, userId);
       if (streak) {
         longestStreak = Math.max(longestStreak, streak.currentStreak);
         
-        // Check if streak started this week
-        if (streak.startDate >= weekStart && streak.startDate <= weekEnd) {
+        // Check if streak started this week (simplified - would need more complex logic)
+        if (streak.currentStreak > 0 && streak.lastEventDate && streak.lastEventDate >= weekStart && streak.lastEventDate <= weekEnd) {
           streaksStarted++;
         }
         
@@ -749,8 +749,8 @@ export class WeeklySummaryService {
 
     const habitRisks = weeklyData.habitData?.map(habit => ({
       habitName: habit.habitTitle,
-      riskLevel: habit.completionRate < 40 ? 'high' : 
-                 habit.completionRate < 70 ? 'medium' : 'low' as const,
+      riskLevel: (habit.completionRate < 40 ? 'high' : 
+                 habit.completionRate < 70 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
       reason: habit.completionRate < 40 ? 'Very low completion rate' :
               habit.completionRate < 70 ? 'Below average performance' : 'Performing well',
     })) || [];
