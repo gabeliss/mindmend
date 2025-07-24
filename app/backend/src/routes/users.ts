@@ -13,6 +13,67 @@ import Logger from '../utils/logger';
 
 const router = Router();
 
+// Create new user (for initial account creation)
+router.post('/',
+  validateRequestBody({
+    firebaseUid: (uid) => typeof uid === 'string' && uid.length > 0,
+    email: (email) => validateEmail(email),
+    displayName: (name) => typeof name === 'string' && name.length > 0,
+    coachStyle: (style) => !style || validateCoachStyle(style)
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { firebaseUid, email, displayName, coachStyle } = req.body;
+    
+    try {
+      // Check if user already exists
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { firebaseUid },
+            { email }
+          ]
+        }
+      });
+      
+      if (existingUser) {
+        return ResponseHandler.error(res, 'User already exists', 409);
+      }
+      
+      // Create new user
+      const newUser = await prisma.user.create({
+        data: {
+          firebaseUid,
+          email,
+          displayName: sanitizeString(displayName),
+          coachStyle: coachStyle || 'SUPPORTIVE'
+        },
+        select: {
+          id: true,
+          firebaseUid: true,
+          email: true,
+          displayName: true,
+          coachStyle: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+      
+      Logger.info('New user created', {
+        userId: newUser.id,
+        email: newUser.email
+      });
+      
+      return ResponseHandler.success(res, newUser, 'User created successfully', 201);
+    } catch (error) {
+      Logger.error('Failed to create user', {
+        email,
+        error
+      });
+      return ResponseHandler.error(res, 'Failed to create user', 500);
+    }
+  })
+);
+
 // Get user profile
 router.get('/profile',
   authenticateToken,

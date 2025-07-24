@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import { HabitEventController } from '../controllers/habitEventController';
 import { validateUUID } from '../middleware/validation';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
+
+// GET /api/habit-events - Get all events with filtering
+router.get('/', authenticateToken, HabitEventController.getAllUserEvents);
 
 // POST /api/habit-events/bulk - Bulk log events (for batch operations)
 router.post('/bulk', HabitEventController.bulkLogEvents);

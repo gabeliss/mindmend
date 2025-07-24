@@ -35,7 +35,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     // Development mode: allow mock token
     if (process.env.NODE_ENV === 'development' && token === 'mock-token') {
       const mockUser = await prisma.user.findUnique({
-        where: { email: 'test@mindmend.app' }
+        where: { email: 'demo@mindmend.app' }
       });
       
       if (mockUser) {

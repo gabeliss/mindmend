@@ -131,9 +131,6 @@ class App {
     this.app.use('/api/journal', journalRoutes);
     this.app.use('/api/ai/insights', aiInsightRoutes);
     this.app.use('/api/weekly-summary', weeklySummaryRoutes);
-
-    // 404 handler
-    this.app.use('*', notFoundHandler);
   }
 
   private initializeErrorHandling(): void {

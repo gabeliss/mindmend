@@ -133,9 +133,9 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseURL}${endpoint}`;
-      const headers: HeadersInit = {
+      const headers: { [key: string]: string } = {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...(options.headers as Record<string, string>),
       };
 
       if (this.authToken) {
@@ -194,8 +194,8 @@ class ApiClient {
   }
 
   // Habit methods
-  async getHabits(): Promise<ApiResponse<Habit[]>> {
-    return this.makeRequest<Habit[]>('/habits');
+  async getHabits(): Promise<ApiResponse<{habits: Habit[], meta: any}>> {
+    return this.makeRequest<{habits: Habit[], meta: any}>('/habits');
   }
 
   async createHabit(habitData: {
@@ -229,9 +229,10 @@ class ApiClient {
     notes?: string;
     occurredAt?: string;
   }): Promise<ApiResponse<HabitEvent>> {
-    return this.makeRequest<HabitEvent>('/habit-events', {
+    const { habitId, ...requestBody } = eventData;
+    return this.makeRequest<HabitEvent>(`/habit-events/${habitId}`, {
       method: 'POST',
-      body: JSON.stringify(eventData),
+      body: JSON.stringify(requestBody),
     });
   }
 
@@ -240,7 +241,7 @@ class ApiClient {
     startDate?: string;
     endDate?: string;
     eventType?: string;
-  }): Promise<ApiResponse<HabitEvent[]>> {
+  }): Promise<ApiResponse<{events: HabitEvent[], pagination: any}>> {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -251,12 +252,12 @@ class ApiClient {
     const queryString = queryParams.toString();
     const endpoint = queryString ? `/habit-events?${queryString}` : '/habit-events';
     
-    return this.makeRequest<HabitEvent[]>(endpoint);
+    return this.makeRequest<{events: HabitEvent[], pagination: any}>(endpoint);
   }
 
   // Streak methods
-  async getStreaks(): Promise<ApiResponse<Streak[]>> {
-    return this.makeRequest<Streak[]>('/streaks');
+  async getStreaks(): Promise<ApiResponse<{habitStreaks: any[]}>> {
+    return this.makeRequest<{habitStreaks: any[]}>('/streaks');
   }
 
   async getHabitStreak(habitId: string): Promise<ApiResponse<Streak>> {

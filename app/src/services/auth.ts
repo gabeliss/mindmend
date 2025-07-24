@@ -120,7 +120,7 @@ class AuthService {
       };
 
       // Mock auth token (in real implementation, this comes from Firebase)
-      const mockAuthToken = `mock_token_${Date.now()}`;
+      const mockAuthToken = 'mock-token';
 
       // Create user in our backend
       const userResponse = await apiClient.createUser({
@@ -170,7 +170,7 @@ class AuthService {
       };
 
       // Mock auth token (in real implementation, this comes from Firebase)
-      const mockAuthToken = `mock_token_${Date.now()}`;
+      const mockAuthToken = 'mock-token';
 
       // Set the auth token first
       await apiClient.setAuthToken(mockAuthToken);

@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import { StreakController } from '../controllers/streakController';
 import { validateUUID } from '../middleware/validation';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
+
+// GET /api/streaks - Get all streaks for user (summary)
+router.get('/', authenticateToken, StreakController.getUserStreakSummary);
 
 // GET /api/streaks/dashboard - Get comprehensive streak dashboard data
 router.get('/dashboard', StreakController.getStreakDashboard);

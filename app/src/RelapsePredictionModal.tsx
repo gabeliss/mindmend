@@ -132,8 +132,8 @@ export default function RelapsePredictionModal({ visible, onClose, riskLevel }: 
                     ]}>
                       <Text style={[
                         styles.impactText,
-                        { color: factor.impact === 'high' ? Colors.alert[700] : 
-                                 factor.impact === 'medium' ? Colors.warning[700] : Colors.secondary[700] }
+                        { color: factor.impact === 'high' ? Colors.alert[500] : 
+                                 factor.impact === 'medium' ? Colors.warning[500] : Colors.secondary[500] }
                       ]}>
                         {factor.impact}
                       </Text>

@@ -52,14 +52,36 @@ export default function StreaksScreen() {
     try {
       setIsLoading(true);
 
-      const response = await apiClient.getStreaks();
+      // Load both streaks and habits in parallel
+      const [streaksResponse, habitsResponse] = await Promise.all([
+        apiClient.getStreaks(),
+        apiClient.getHabits(),
+      ]);
 
-      if (isApiError(response)) {
-        throw new Error(handleApiError(response));
+      if (isApiError(streaksResponse)) {
+        throw new Error(handleApiError(streaksResponse));
       }
 
-      const streaksData = response.data || [];
-      setStreaks(streaksData);
+      if (isApiError(habitsResponse)) {
+        throw new Error(handleApiError(habitsResponse));
+      }
+
+      const streaksData = streaksResponse.data?.habitStreaks || [];
+      const habitsData = habitsResponse.data?.habits || [];
+
+      // Create a map of habit IDs to habits
+      const habitMap = new Map();
+      habitsData.forEach((habit: any) => {
+        habitMap.set(habit.id, habit);
+      });
+
+      // Combine streaks with habit information
+      const streaksWithHabits = streaksData.map((streak: any) => ({
+        ...streak,
+        habit: habitMap.get(streak.habitId) || { title: 'Unknown Habit', habitType: 'BUILD' }
+      }));
+
+      setStreaks(streaksWithHabits);
 
       // Calculate streak statistics
       const stats = calculateStreakStats(streaksData);
@@ -82,7 +104,7 @@ export default function StreaksScreen() {
   }, [isAuthenticated, user]);
 
   // Calculate comprehensive streak statistics
-  const calculateStreakStats = (streaksData: Streak[]): StreakStats => {
+  const calculateStreakStats = (streaksData: any[]): StreakStats => {
     if (streaksData.length === 0) {
       return {
         totalStreaks: 0,
@@ -93,11 +115,11 @@ export default function StreaksScreen() {
       };
     }
 
-    const activeStreaks = streaksData.filter(s => s.isActive && s.currentStreak > 0).length;
-    const totalCurrent = streaksData.reduce((sum, s) => sum + s.currentStreak, 0);
-    const longestEver = Math.max(...streaksData.map(s => s.longestStreak));
-    const averageStreak = totalCurrent / streaksData.length;
-    const totalDays = streaksData.reduce((sum, s) => sum + s.longestStreak, 0);
+    const activeStreaks = streaksData.filter(s => s && s.isActive && s.currentStreak > 0).length;
+    const totalCurrent = streaksData.reduce((sum, s) => sum + (s?.currentStreak || 0), 0);
+    const longestEver = streaksData.length > 0 ? Math.max(...streaksData.map(s => s?.longestStreak || 0)) : 0;
+    const averageStreak = streaksData.length > 0 ? totalCurrent / streaksData.length : 0;
+    const totalDays = streaksData.reduce((sum, s) => sum + (s?.longestStreak || 0), 0);
 
     return {
       totalStreaks: streaksData.length,
@@ -109,7 +131,7 @@ export default function StreaksScreen() {
   };
 
   // Generate milestone achievements
-  const generateMilestones = (streaksData: Streak[], stats: StreakStats): Milestone[] => {
+  const generateMilestones = (streaksData: any[], stats: StreakStats): Milestone[] => {
     const milestones: Milestone[] = [
       {
         id: '1',

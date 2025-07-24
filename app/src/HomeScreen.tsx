@@ -55,29 +55,25 @@ export default function HomeScreen() {
     setAnimatedValues(newAnimatedValues);
   }, [habits]);
 
-  const getCurrentTime = () => {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    return hours * 60 + minutes;
+  // Helper function to get motivational message
+  const getMotivationalMessage = (completed: number, total: number, avgStreak: number): string => {
+    const completionRate = total > 0 ? (completed / total) * 100 : 0;
+    
+    if (completionRate === 100) {
+      return "Perfect day! You're absolutely crushing it! 🎉";
+    } else if (completionRate >= 75) {
+      return "You're doing amazing! Keep up the great work! 💪";
+    } else if (completionRate >= 50) {
+      return "Good progress today! You're on the right track! 🌟";
+    } else if (avgStreak > 5) {
+      return `Don't break your ${avgStreak}-day streak now! You've got this! 🔥`;
+    } else {
+      return "Every small step counts. Keep building those positive habits! 🌱";
+    }
   };
 
-  const parseTime = (timeStr: string): number => {
-    const [time, period] = timeStr.split(' ');
-    const [hours, minutes] = time.split(':').map(Number);
-    let hour24 = hours;
-    if (period === 'PM' && hours !== 12) hour24 += 12;
-    if (period === 'AM' && hours === 12) hour24 = 0;
-    return hour24 * 60 + minutes;
-  };
 
-  const isHabitOverdue = (timeStr: string): boolean => {
-    if (!timeStr) return false;
-    const habitTime = parseTime(timeStr);
-    const currentTime = getCurrentTime();
-    return currentTime > habitTime;
-  };
-
+  // Load habits from API
   const loadHabits = useCallback(async () => {
     if (!isAuthenticated || !user) return;
 
@@ -98,26 +94,26 @@ export default function HomeScreen() {
         throw new Error(handleApiError(habitsResponse));
       }
 
-      const habitsData = habitsResponse.data || [];
-      const streaksData = streaksResponse.data || [];
-      const eventsData = todaysEventsResponse.data || [];
+      const habitsData = habitsResponse.data?.habits || [];
+      const streaksData = streaksResponse.data?.habitStreaks || [];
+      const eventsData = todaysEventsResponse.data?.events || [];
 
       // Create a map of habit IDs to streaks
-      const streakMap = new Map<string, Streak>();
-      streaksData.forEach(streak => {
+      const streakMap = new Map<string, any>();
+      streaksData.forEach((streak: any) => {
         streakMap.set(streak.habitId, streak);
       });
 
       // Create a map of completed habits today
       const completedToday = new Set<string>();
-      eventsData.forEach(event => {
+      eventsData.forEach((event: any) => {
         if (event.eventType === 'COMPLETED') {
           completedToday.add(event.habitId);
         }
       });
 
       // Combine habits with their streak data and completion status
-      const habitsWithStreak: HabitWithStreak[] = habitsData.map(habit => {
+      const habitsWithStreak: HabitWithStreak[] = habitsData.map((habit: any) => {
         const streak = streakMap.get(habit.id);
         const completedTodayFlag = completedToday.has(habit.id);
         
@@ -139,7 +135,7 @@ export default function HomeScreen() {
           streak: streak?.currentStreak || 0,
           completedToday: completedTodayFlag,
           suggestedTime,
-          isOverdue: isHabitOverdue(suggestedTime) && !completedTodayFlag,
+          isOverdue: false, // Simplified for now
         };
       });
 
@@ -161,155 +157,83 @@ export default function HomeScreen() {
 
     } catch (error) {
       console.error('Failed to load habits:', error);
-      Alert.alert(
-        'Error',
-        'Failed to load your habits. Please check your connection and try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', 'Failed to load your habits. Please try again.');
     } finally {
       setIsLoading(false);
     }
   }, [isAuthenticated, user]);
 
-  const loadDailyInsight = useCallback(async () => {
-    if (!isAuthenticated || !user) return;
-
+  // Complete or avoid a habit
+  const toggleHabitCompletion = useCallback(async (habitId: string, habitType: 'BUILD' | 'BREAK') => {
     try {
-      const insightsResponse = await apiClient.getTodaysInsights();
-      if (!isApiError(insightsResponse) && insightsResponse.data && insightsResponse.data.length > 0) {
-        const dailyTip = insightsResponse.data.find(insight => insight.insightType === 'DAILY_TIP');
-        if (dailyTip) {
-          setDailyInsight(dailyTip.content);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load daily insight:', error);
-    }
-  }, [isAuthenticated, user]);
-
-  const getMotivationalMessage = (completed: number, total: number, avgStreak: number): string => {
-    const completionRate = total > 0 ? (completed / total) * 100 : 0;
-    
-    if (completionRate === 100) {
-      return "Perfect day! You're absolutely crushing it! 🎉";
-    } else if (completionRate >= 75) {
-      return "You're doing amazing! Keep up the great work! 💪";
-    } else if (completionRate >= 50) {
-      return "Good progress today! You're on the right track! 🌟";
-    } else if (avgStreak > 5) {
-      return `Don't break your ${avgStreak}-day streak now! You've got this! 🔥`;
-    } else {
-      return "Every small step counts. Keep building those positive habits! 🌱";
-    }
-  };
-
-  const toggleHabitCompletion = async (habit: HabitWithStreak) => {
-    try {
-      const eventType = habit.completedToday ? 'SKIPPED' : 'COMPLETED';
-      
       // Optimistic update
-      const updatedHabits = habits.map(h => 
-        h.id === habit.id 
-          ? { ...h, completedToday: !h.completedToday }
-          : h
+      setHabits(prevHabits => 
+        prevHabits.map(habit => 
+          habit.id === habitId 
+            ? { ...habit, completedToday: !habit.completedToday }
+            : habit
+        )
       );
-      setHabits(updatedHabits);
 
-      // Update progress optimistically
-      const newCompleted = habit.completedToday 
-        ? todaysProgress.completedHabits - 1 
-        : todaysProgress.completedHabits + 1;
-      
-      setTodaysProgress(prev => ({
-        ...prev,
-        completedHabits: newCompleted,
-        motivationalMessage: getMotivationalMessage(newCompleted, prev.totalHabits, prev.currentStreak),
-      }));
-
-      // Animate on completion (not skipping)
-      if (!habit.completedToday) {
-        Vibration.vibrate(50);
-        if (animatedValues[habit.id]) {
-          Animated.sequence([
-            Animated.timing(animatedValues[habit.id], {
-              toValue: 1.2,
-              duration: 150,
-              useNativeDriver: true,
-            }),
-            Animated.timing(animatedValues[habit.id], {
-              toValue: 1,
-              duration: 150,
-              useNativeDriver: true,
-            }),
-          ]).start();
-        }
+      // Animate the completion
+      const animatedValue = animatedValues[habitId];
+      if (animatedValue) {
+        Animated.sequence([
+          Animated.timing(animatedValue, {
+            toValue: 0.9,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animatedValue, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
       }
 
-      // Log the event to backend
-      const eventResponse = await apiClient.logHabitEvent({
-        habitId: habit.id,
-        eventType,
-        notes: eventType === 'COMPLETED' 
-          ? `${habit.title} completed via mobile app`
-          : `${habit.title} skipped via mobile app`,
+      // Vibrate for tactile feedback
+      Vibration.vibrate(50);
+
+      // Log habit event in backend
+      const response = await apiClient.logHabitEvent({
+        habitId,
+        eventType: 'COMPLETED',
+        notes: habitType === 'BREAK' ? 'Successfully avoided' : 'Completed habit',
       });
 
-      if (isApiError(eventResponse)) {
+      if (isApiError(response)) {
         // Revert optimistic update on error
-        setHabits(habits);
-        setTodaysProgress(prev => ({
-          ...prev,
-          completedHabits: todaysProgress.completedHabits,
-          motivationalMessage: getMotivationalMessage(
-            todaysProgress.completedHabits, 
-            prev.totalHabits, 
-            prev.currentStreak
-          ),
-        }));
-        
-        Alert.alert(
-          'Error',
-          'Failed to update habit. Please try again.',
-          [{ text: 'OK' }]
+        setHabits(prevHabits => 
+          prevHabits.map(habit => 
+            habit.id === habitId 
+              ? { ...habit, completedToday: !habit.completedToday }
+              : habit
+          )
         );
+        throw new Error(handleApiError(response));
       }
+
+      // Reload habits to get updated streak information
+      await loadHabits();
 
     } catch (error) {
       console.error('Failed to toggle habit completion:', error);
-      
-      // Revert optimistic update
-      setHabits(habits);
-      setTodaysProgress(prev => ({
-        ...prev,
-        completedHabits: todaysProgress.completedHabits,
-      }));
-      
-      Alert.alert(
-        'Error',
-        'Failed to update habit. Please check your connection.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', 'Failed to update habit. Please try again.');
     }
-  };
+  }, [animatedValues, loadHabits]);
 
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await Promise.all([loadHabits(), loadDailyInsight()]);
-    setIsRefreshing(false);
-  }, [loadHabits, loadDailyInsight]);
-
-  // Load data when component mounts or user changes
+  // Load habits when authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
       loadHabits();
-      loadDailyInsight();
     }
-  }, [isAuthenticated, user, loadHabits, loadDailyInsight]);
+  }, [isAuthenticated, user, loadHabits]);
 
-  // Show loading spinner while authenticating or loading initial data
-  if (authLoading || (isLoading && !isRefreshing)) {
+  // Show loading state
+  if (authLoading) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
+      <View style={styles.container}>
         <ActivityIndicator size="large" color="#4F8EF7" />
         <Text style={styles.loadingText}>Loading your habits...</Text>
       </View>
@@ -319,7 +243,7 @@ export default function HomeScreen() {
   // Show authentication prompt if not authenticated
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
+      <View style={styles.container}>
         <Text style={styles.authPrompt}>Please sign in to view your habits</Text>
       </View>
     );
@@ -354,7 +278,7 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={handleRefresh}
+            onRefresh={loadHabits}
             colors={['#4F8EF7']}
             tintColor="#4F8EF7"
           />
@@ -385,15 +309,17 @@ export default function HomeScreen() {
               
               {item.habitType === 'BUILD' ? (
                 <TouchableOpacity 
-                  style={[styles.checkbox, isCompleted && styles.checkboxCompleted]} 
-                  onPress={() => toggleHabitCompletion(item)}
+                  style={[styles.checkbox, isCompleted && styles.checkboxCompleted]}
+                  onPress={() => toggleHabitCompletion(item.id, item.habitType)}
+                  activeOpacity={0.7}
                 >
                   {isCompleted && <Text style={styles.checkmark}>✓</Text>}
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity 
                   style={[styles.avoidTag, isCompleted && styles.avoidTagCompleted]}
-                  onPress={() => toggleHabitCompletion(item)}
+                  onPress={() => toggleHabitCompletion(item.id, item.habitType)}
+                  activeOpacity={0.7}
                 >
                   <Text style={[styles.avoidTagText, isCompleted && styles.avoidTagTextCompleted]}>
                     {isCompleted ? 'Avoided ✓' : 'Avoid'}
@@ -447,123 +373,53 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   authPrompt: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
   },
   progressSection: {
-    backgroundColor: '#E6F3FF',
+    marginBottom: 20,
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   progressText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1A365D',
+    color: '#2D3748',
     textAlign: 'center',
+    fontWeight: '600',
   },
   motivation: {
     fontSize: 14,
-    color: '#2B6CB0',
-    fontStyle: 'italic',
+    color: '#4F8EF7',
     textAlign: 'center',
     marginTop: 8,
+    fontStyle: 'italic',
   },
   insightSection: {
-    backgroundColor: '#F0FFF4',
+    marginBottom: 20,
     padding: 16,
+    backgroundColor: '#E6F3FF',
     borderRadius: 12,
-    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4F8EF7',
   },
   insightLabel: {
     fontSize: 12,
+    color: '#4F8EF7',
     fontWeight: '600',
-    color: '#22543D',
-    marginBottom: 4,
+    marginBottom: 8,
+    textTransform: 'uppercase',
   },
   insightText: {
     fontSize: 14,
-    color: '#2F855A',
+    color: '#2D3748',
     lineHeight: 20,
   },
-  habitRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 12, 
-    backgroundColor: '#fff', 
-    borderRadius: 10, 
-    padding: 12, 
-    shadowColor: '#000', 
-    shadowOpacity: 0.05, 
-    shadowRadius: 4, 
-    elevation: 2,
-    borderLeftWidth: 4,
-    borderLeftColor: '#E2E8F0'
-  },
-  buildHabit: { borderLeftColor: '#4F8EF7' },
-  breakHabit: { borderLeftColor: '#F56565' },
-  overdueHabit: { opacity: 0.6, backgroundColor: '#F7FAFC' },
-  habitIcon: { fontSize: 20, marginRight: 12 },
-  checkbox: { 
-    width: 24, 
-    height: 24, 
-    borderRadius: 12, 
-    borderWidth: 2, 
-    borderColor: '#4F8EF7', 
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  checkboxCompleted: { backgroundColor: '#4F8EF7' },
-  checkmark: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  avoidTag: { 
-    backgroundColor: '#FEB2B2', 
-    borderRadius: 8, 
-    paddingHorizontal: 8, 
-    paddingVertical: 4, 
-    marginRight: 12,
-    minWidth: 60,
-    alignItems: 'center'
-  },
-  avoidTagCompleted: { backgroundColor: '#48BB78' },
-  avoidTagText: { 
-    color: '#C53030', 
-    fontWeight: 'bold',
-    fontSize: 12
-  },
-  avoidTagTextCompleted: { color: '#fff' },
-  habitInfo: { flex: 1 },
-  habitNameRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 4 
-  },
-  habitName: { 
-    fontSize: 16, 
-    color: '#2D3748',
-    marginRight: 8,
-    fontWeight: '600',
-  },
-  habitNameCompleted: { 
-    textDecorationLine: 'line-through',
-    color: '#A0AEC0'
-  },
-  habitDescription: {
-    fontSize: 14,
-    color: '#718096',
-    marginBottom: 4,
-  },
-  streakBadge: {
-    backgroundColor: '#FED7D7',
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginRight: 4
-  },
-  streakText: { fontSize: 10, fontWeight: 'bold' },
-  habitTime: { fontSize: 14, color: '#A0AEC0' },
-  habitTimeOverdue: { color: '#F56565', fontWeight: 'bold' },
   emptyState: {
     padding: 40,
     alignItems: 'center',
@@ -572,5 +428,115 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  habitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  buildHabit: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
+  },
+  breakHabit: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+  },
+  overdueHabit: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#EF4444',
+  },
+  habitIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxCompleted: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  checkmark: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  avoidTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FEE2E2',
+    marginRight: 12,
+  },
+  avoidTagCompleted: {
+    backgroundColor: '#DCFCE7',
+  },
+  avoidTagText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  avoidTagTextCompleted: {
+    color: '#059669',
+  },
+  habitInfo: {
+    flex: 1,
+  },
+  habitNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  habitName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    flex: 1,
+  },
+  habitNameCompleted: {
+    color: '#6B7280',
+    textDecorationLine: 'line-through',
+  },
+  streakBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  streakText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#D97706',
+  },
+  habitDescription: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  habitTime: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  habitTimeOverdue: {
+    color: '#EF4444',
+    fontWeight: '600',
   },
 });
