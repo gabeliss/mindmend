@@ -1,0 +1,22 @@
+{
+  "name": "mindmend",
+  "version": "1.0.0",
+  "description": "MindMend - Mental health and habit tracking application",
+  "private": true,
+  "workspaces": [
+    "app",
+    "website"
+  ],
+  "scripts": {
+    "dev:app": "cd app && npm run start",
+    "dev:web": "cd website && npm run dev",
+    "build:web": "cd website && npm run build",
+    "install:all": "npm install && cd app && npm install && cd ../website && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
