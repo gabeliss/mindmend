@@ -139,10 +139,12 @@ class App {
   }
 
   public listen(): void {
-    this.app.listen(this.port, () => {
-      console.log(`🚀 MindMend API server is running on port ${this.port}`);
+    const port = Number(this.port);
+    this.app.listen(port, '0.0.0.0', () => {
+      console.log(`🚀 MindMend API server is running on port ${port}`);
       console.log(`🌟 Environment: ${process.env.NODE_ENV}`);
-      console.log(`🔗 Health check: http://localhost:${this.port}/health`);
+      console.log(`🔗 Health check: http://localhost:${port}/health`);
+      console.log(`📱 Mobile access: http://192.168.0.35:${port}/health`);
     });
   }
 }

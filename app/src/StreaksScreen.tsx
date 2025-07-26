@@ -4,7 +4,6 @@ import {
   Text, 
   StyleSheet, 
   ScrollView, 
-  TouchableOpacity, 
   ActivityIndicator,
   Alert,
   RefreshControl 
@@ -42,9 +41,9 @@ export default function StreaksScreen() {
     totalDaysLogged: 0,
   });
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('week');
 
   // Load streaks and calculate stats
   const loadStreaks = useCallback(async () => {
@@ -52,11 +51,29 @@ export default function StreaksScreen() {
 
     try {
       setIsLoading(true);
+      
+      // Clear old data to ensure fresh state
+      setRecentEvents([]);
 
-      // Load both streaks and habits in parallel
-      const [streaksResponse, habitsResponse] = await Promise.all([
+      // Calculate date range for last 7 days (using local timezone)
+      const today = new Date();
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 6);
+      
+      // Use local date format to avoid timezone issues
+      const startDate = sevenDaysAgo.getFullYear() + '-' + 
+        String(sevenDaysAgo.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(sevenDaysAgo.getDate()).padStart(2, '0');
+      const endDate = today.getFullYear() + '-' + 
+        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(today.getDate()).padStart(2, '0');
+      
+      // Load streaks, habits, recent events, and today's events in parallel
+      const [streaksResponse, habitsResponse, eventsResponse, todayEventsResponse] = await Promise.all([
         apiClient.getStreaks(),
         apiClient.getHabits(),
+        apiClient.getHabitEvents({ startDate, endDate }),
+        apiClient.getTodayEvents(),
       ]);
 
       if (isApiError(streaksResponse)) {
@@ -67,8 +84,26 @@ export default function StreaksScreen() {
         throw new Error(handleApiError(habitsResponse));
       }
 
+      if (isApiError(eventsResponse)) {
+        throw new Error(handleApiError(eventsResponse));
+      }
+
+      if (isApiError(todayEventsResponse)) {
+        throw new Error(handleApiError(todayEventsResponse));
+      }
+
       const streaksData = streaksResponse.data?.habitStreaks || [];
       const habitsData = habitsResponse.data?.habits || [];
+      const eventsData = eventsResponse.data?.events || [];
+      const todayEventsData = todayEventsResponse.data?.events || [];
+
+      // Merge today's events with recent events, ensuring no duplicates
+      const eventIds = new Set(eventsData.map((e: any) => e.id));
+      const additionalTodayEvents = todayEventsData.filter((e: any) => !eventIds.has(e.id));
+      const allEvents = [...eventsData, ...additionalTodayEvents];
+
+      // Store recent events for calendar view
+      setRecentEvents(allEvents);
 
 
       // Create a map of habit IDs to habits
@@ -90,7 +125,7 @@ export default function StreaksScreen() {
       setStreakStats(stats);
 
       // Generate milestones
-      const milestonesData = generateMilestones(streaksData, stats);
+      const milestonesData = generateMilestones(stats);
 
       setMilestones(milestonesData);
 
@@ -137,7 +172,7 @@ export default function StreaksScreen() {
   };
 
   // Generate milestone achievements
-  const generateMilestones = (streaksData: any[], stats: StreakStats): Milestone[] => {
+  const generateMilestones = (stats: StreakStats): Milestone[] => {
     const milestones: Milestone[] = [
       {
         id: '1',
@@ -207,12 +242,126 @@ export default function StreaksScreen() {
     return '#9F7AEA';
   };
 
+  // Get today's date string consistently
+  const getTodayString = (): string => {
+    const today = new Date();
+    return today.getFullYear() + '-' + 
+      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+      String(today.getDate()).padStart(2, '0');
+  };
+
+  // Check if habit was completed today
+  const isCompletedToday = (streak: Streak): boolean => {
+    const todayString = getTodayString();
+    return recentEvents.some(event => 
+      event.habitId === streak.habitId && 
+      event.eventType === 'COMPLETED' &&
+      event.occurredAt.startsWith(todayString)
+    );
+  };
+
+  // Check if habit was explicitly skipped/failed today
+  const isSkippedToday = (streak: Streak): boolean => {
+    const todayString = getTodayString();
+    return recentEvents.some(event => 
+      event.habitId === streak.habitId && 
+      (event.eventType === 'SKIPPED' || event.eventType === 'RELAPSED') &&
+      event.occurredAt.startsWith(todayString)
+    );
+  };
+
+  // Get habit status for today
+  const getTodayStatus = (streak: Streak): 'completed' | 'skipped' | 'pending' => {
+    if (isCompletedToday(streak)) return 'completed';
+    if (isSkippedToday(streak)) return 'skipped';
+    return 'pending';
+  };
+
   // Get streak status text
   const getStreakStatus = (streak: Streak): string => {
-    if (!streak.isActive) return 'Broken';
-    if (streak.currentStreak === 0) return 'Not started';
-    if (streak.currentStreak === 1) return 'Just started!';
-    return `${streak.currentStreak} days strong`;
+    if (streak.currentStreak === 0) return 'Ready to start';
+    
+    const todayStatus = getTodayStatus(streak);
+    
+    if (todayStatus === 'skipped') {
+      // Explicitly skipped/failed today - streak is broken
+      if (streak.currentStreak === 1) return 'Streak broken';
+      return `${streak.currentStreak}-day streak broken`;
+    }
+    
+    if (todayStatus === 'completed') {
+      // Completed today - active streak
+      if (streak.currentStreak === 1) return 'Day 1 - Great start! 🌟';
+      if (streak.currentStreak < 7) return `${streak.currentStreak} days strong 💪`;
+      if (streak.currentStreak < 30) return `${streak.currentStreak} days - On fire! 🔥`;
+      return `${streak.currentStreak} days - Legendary! ⚡`;
+    }
+    
+    // Pending - no event today yet, but streak is still alive
+    if (streak.currentStreak === 1) return '1 day streak (continue today)';
+    return `${streak.currentStreak} days (continue today) ⏳`;
+  };
+
+  // Generate calendar data for last 7 days using real API data
+  const generateCalendarData = (streak: Streak) => {
+    const days = [];
+    const today = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      
+      // Check if this habit was completed on this specific date
+      const dateString = date.getFullYear() + '-' + 
+        String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(date.getDate()).padStart(2, '0');
+      const wasCompleted = recentEvents.some(event => 
+        event.habitId === streak.habitId && 
+        event.eventType === 'COMPLETED' &&
+        event.occurredAt.startsWith(dateString)
+      );
+      
+      
+      days.push({
+        date: date.getDate(),
+        dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        isCompleted: wasCompleted,
+        isToday: i === 0
+      });
+    }
+    
+    return days;
+  };
+
+  // Render 7-day calendar view
+  const renderCalendarView = (streak: Streak) => {
+    const calendarData = generateCalendarData(streak);
+    
+    return (
+      <View style={styles.calendarContainer}>
+        <Text style={styles.calendarTitle}>Last 7 days</Text>
+        <View style={styles.calendarGrid}>
+          {calendarData.map((day, index) => (
+            <View key={index} style={styles.calendarDay}>
+              <Text style={styles.dayName}>{day.dayName}</Text>
+              <View style={[
+                styles.dayCircle,
+                day.isCompleted && styles.completedDay,
+                day.isToday && styles.todayCircle
+              ]}>
+                <Text style={[
+                  styles.dayNumber,
+                  day.isCompleted && styles.completedDayText,
+                  day.isToday && styles.todayText
+                ]}>
+                  {day.date}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
   };
 
   // Handle refresh
@@ -233,7 +382,10 @@ export default function StreaksScreen() {
   useFocusEffect(
     useCallback(() => {
       if (isAuthenticated && user) {
-        loadStreaks();
+        // Force refresh with a small delay to ensure backend has processed any recent changes
+        setTimeout(() => {
+          loadStreaks();
+        }, 200);
       }
     }, [isAuthenticated, user, loadStreaks])
   );
@@ -287,7 +439,14 @@ export default function StreaksScreen() {
                 styles.streakBadge,
                 { backgroundColor: getStreakColor(streak.currentStreak) }
               ]}>
-                <Text style={styles.streakNumber}>🔥{streak.currentStreak}</Text>
+                <Text style={styles.streakNumber}>
+                  {(() => {
+                    const todayStatus = getTodayStatus(streak);
+                    if (todayStatus === 'completed') return '🔥';
+                    if (todayStatus === 'skipped') return '⭕';
+                    return '⏳'; // pending
+                  })()}{streak.currentStreak}
+                </Text>
               </View>
             </View>
             
@@ -317,11 +476,8 @@ export default function StreaksScreen() {
               </View>
             </View>
 
-            {streak.lastEventDate && (
-              <Text style={styles.lastEventDate}>
-                Last activity: {new Date(streak.lastEventDate).toLocaleDateString()}
-              </Text>
-            )}
+            {/* Calendar view */}
+            {renderCalendarView(streak)}
           </View>
         ))
       )}
@@ -535,11 +691,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 3,
   },
-  lastEventDate: {
-    fontSize: 12,
-    color: '#A0AEC0',
-    fontStyle: 'italic',
-  },
   milestonesContainer: {
     padding: 16,
   },
@@ -598,5 +749,62 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: '#38A169',
+  },
+  // Calendar view styles
+  calendarContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  calendarTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 8,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  calendarDay: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  dayName: {
+    fontSize: 10,
+    color: '#94A3B8',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  dayCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  completedDay: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  todayCircle: {
+    borderColor: '#4F8EF7',
+    borderWidth: 2,
+  },
+  dayNumber: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  completedDayText: {
+    color: '#fff',
+  },
+  todayText: {
+    color: '#4F8EF7',
+    fontWeight: '700',
   },
 });

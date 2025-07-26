@@ -33,32 +33,59 @@ class AuthService {
   }
 
   private async initializeAuth(): Promise<void> {
+    const authId = `auth_init_${Date.now()}`;
+    console.log(`[AUTH] ${authId} - Starting auth initialization`);
+    
     try {
       // Load stored user data
+      console.log(`[AUTH] ${authId} - Loading stored auth data from AsyncStorage`);
       const storedUser = await AsyncStorage.getItem('currentUser');
       const storedFirebaseUser = await AsyncStorage.getItem('firebaseUser');
       const authToken = await AsyncStorage.getItem('authToken');
 
+      console.log(`[AUTH] ${authId} - Storage check results:`, {
+        hasStoredUser: !!storedUser,
+        hasStoredFirebaseUser: !!storedFirebaseUser,
+        hasAuthToken: !!authToken,
+        authTokenLength: authToken?.length
+      });
+
       if (storedUser && storedFirebaseUser && authToken) {
+        console.log(`[AUTH] ${authId} - Found stored auth data, parsing and setting up`);
         this.currentUser = JSON.parse(storedUser);
         this.firebaseUser = JSON.parse(storedFirebaseUser);
+        
+        console.log(`[AUTH] ${authId} - Parsed user data:`, {
+          userId: this.currentUser?.id,
+          userEmail: this.currentUser?.email,
+          firebaseUid: this.firebaseUser?.uid
+        });
+        
         await apiClient.setAuthToken(authToken);
+        console.log(`[AUTH] ${authId} - Auth token set in API client`);
         
         // Verify token is still valid by fetching profile
+        console.log(`[AUTH] ${authId} - Verifying token validity with profile fetch`);
         const profileResponse = await apiClient.getProfile();
+        
         if (!profileResponse.success) {
-          // Token expired or invalid, clear auth state
+          console.error(`[AUTH] ${authId} - Token verification failed:`, profileResponse.error);
+          console.log(`[AUTH] ${authId} - Clearing invalid auth state`);
           await this.clearAuthState();
         } else if (profileResponse.data) {
-          // Update user data with latest from server
+          console.log(`[AUTH] ${authId} - Token valid, updating user data`);
           this.currentUser = profileResponse.data;
           await AsyncStorage.setItem('currentUser', JSON.stringify(this.currentUser));
         }
+      } else {
+        console.log(`[AUTH] ${authId} - No complete auth data found in storage`);
       }
 
+      console.log(`[AUTH] ${authId} - Auth initialization complete, notifying listeners`);
       this.notifyAuthStateChange();
     } catch (error) {
-      console.error('Failed to initialize auth:', error);
+      console.error(`[AUTH] ${authId} - Failed to initialize auth:`, error);
+      console.log(`[AUTH] ${authId} - Clearing auth state due to initialization error`);
       await this.clearAuthState();
     }
   }
@@ -109,9 +136,13 @@ class AuthService {
     password: string, 
     displayName: string
   ): Promise<{ user: User; error?: AuthError }> {
+    const signupId = `signup_${Date.now()}`;
+    console.log(`[AUTH] ${signupId} - Starting signup process for email: ${email}`);
+    
     try {
       // In a real implementation, this would use Firebase Auth
       // For now, we'll simulate Firebase user creation and get a mock token
+      console.log(`[AUTH] ${signupId} - Creating mock Firebase user`);
       const mockFirebaseUser: FirebaseUser = {
         uid: `firebase_${Date.now()}_${Math.random()}`,
         email,
@@ -119,18 +150,30 @@ class AuthService {
         emailVerified: true,
       };
 
+      console.log(`[AUTH] ${signupId} - Mock Firebase user created:`, {
+        uid: mockFirebaseUser.uid,
+        email: mockFirebaseUser.email,
+        displayName: mockFirebaseUser.displayName
+      });
+
       // Mock auth token (in real implementation, this comes from Firebase)
       const mockAuthToken = 'mock-token';
+      console.log(`[AUTH] ${signupId} - Generated mock auth token`);
 
       // Create user in our backend
-      const userResponse = await apiClient.createUser({
+      console.log(`[AUTH] ${signupId} - Creating user in backend API`);
+      const userData = {
         firebaseUid: mockFirebaseUser.uid,
         email,
         displayName,
-        coachStyle: 'SUPPORTIVE', // Default coach style
-      });
+        coachStyle: 'SUPPORTIVE' as const,
+      };
+      console.log(`[AUTH] ${signupId} - User data for backend:`, userData);
+      
+      const userResponse = await apiClient.createUser(userData);
 
       if (!userResponse.success || !userResponse.data) {
+        console.error(`[AUTH] ${signupId} - Backend user creation failed:`, userResponse.error);
         return {
           user: null as any,
           error: {
@@ -140,11 +183,19 @@ class AuthService {
         };
       }
 
+      console.log(`[AUTH] ${signupId} - User created successfully in backend:`, {
+        userId: userResponse.data.id,
+        userEmail: userResponse.data.email
+      });
+
       // Store auth state
+      console.log(`[AUTH] ${signupId} - Storing auth state`);
       await this.setAuthState(userResponse.data, mockFirebaseUser, mockAuthToken);
 
+      console.log(`[AUTH] ${signupId} - Signup process completed successfully`);
       return { user: userResponse.data };
     } catch (error) {
+      console.error(`[AUTH] ${signupId} - Signup process failed with error:`, error);
       return {
         user: null as any,
         error: {
@@ -159,9 +210,13 @@ class AuthService {
     email: string, 
     password: string
   ): Promise<{ user: User; error?: AuthError }> {
+    const signinId = `signin_${Date.now()}`;
+    console.log(`[AUTH] ${signinId} - Starting signin process for email: ${email}`);
+    
     try {
       // In a real implementation, this would use Firebase Auth
       // For now, we'll simulate sign in
+      console.log(`[AUTH] ${signinId} - Creating mock Firebase user for signin`);
       const mockFirebaseUser: FirebaseUser = {
         uid: `firebase_${email.replace('@', '_').replace('.', '_')}`,
         email,
@@ -169,25 +224,41 @@ class AuthService {
         emailVerified: true,
       };
 
+      console.log(`[AUTH] ${signinId} - Mock Firebase user for signin:`, {
+        uid: mockFirebaseUser.uid,
+        email: mockFirebaseUser.email,
+        displayName: mockFirebaseUser.displayName
+      });
+
       // Mock auth token (in real implementation, this comes from Firebase)
       const mockAuthToken = 'mock-token';
+      console.log(`[AUTH] ${signinId} - Generated mock auth token for signin`);
 
       // Set the auth token first
+      console.log(`[AUTH] ${signinId} - Setting auth token in API client`);
       await apiClient.setAuthToken(mockAuthToken);
 
       // Try to get user profile from backend
+      console.log(`[AUTH] ${signinId} - Fetching user profile from backend`);
       const profileResponse = await apiClient.getProfile();
       
       if (!profileResponse.success) {
+        console.log(`[AUTH] ${signinId} - User doesn't exist in backend, creating new user`);
+        console.log(`[AUTH] ${signinId} - Profile fetch error:`, profileResponse.error);
+        
         // User doesn't exist in backend, create them
-        const createResponse = await apiClient.createUser({
+        const userData = {
           firebaseUid: mockFirebaseUser.uid,
           email,
           displayName: mockFirebaseUser.displayName || email.split('@')[0],
-          coachStyle: 'SUPPORTIVE',
-        });
+          coachStyle: 'SUPPORTIVE' as const,
+        };
+        console.log(`[AUTH] ${signinId} - Creating user in backend with data:`, userData);
+        
+        const createResponse = await apiClient.createUser(userData);
 
         if (!createResponse.success || !createResponse.data) {
+          console.error(`[AUTH] ${signinId} - Failed to create user in backend:`, createResponse.error);
           return {
             user: null as any,
             error: {
@@ -197,15 +268,25 @@ class AuthService {
           };
         }
 
+        console.log(`[AUTH] ${signinId} - User created in backend, storing auth state`);
         await this.setAuthState(createResponse.data, mockFirebaseUser, mockAuthToken);
+        console.log(`[AUTH] ${signinId} - Signin completed (new user created)`);
         return { user: createResponse.data };
       }
 
+      console.log(`[AUTH] ${signinId} - User exists in backend, storing auth state`);
+      console.log(`[AUTH] ${signinId} - Profile data:`, {
+        userId: profileResponse.data?.id,
+        userEmail: profileResponse.data?.email
+      });
+      
       // User exists, store auth state
       await this.setAuthState(profileResponse.data!, mockFirebaseUser, mockAuthToken);
+      console.log(`[AUTH] ${signinId} - Signin completed (existing user)`);
       return { user: profileResponse.data! };
 
     } catch (error) {
+      console.error(`[AUTH] ${signinId} - Signin process failed with error:`, error);
       return {
         user: null as any,
         error: {

@@ -51,30 +51,66 @@ export default function AuthScreen() {
   };
 
   const handleAuth = async () => {
-    if (!validateForm()) return;
+    const uiId = `ui_auth_${Date.now()}`;
+    console.log(`[AUTH_UI] ${uiId} - Starting ${isSignUp ? 'signup' : 'signin'} process`);
+    console.log(`[AUTH_UI] ${uiId} - Form data:`, {
+      email: email.trim(),
+      hasPassword: !!password,
+      passwordLength: password.length,
+      displayName: isSignUp ? displayName.trim() : 'N/A'
+    });
+    
+    if (!validateForm()) {
+      console.log(`[AUTH_UI] ${uiId} - Form validation failed`);
+      return;
+    }
 
     try {
+      console.log(`[AUTH_UI] ${uiId} - Form validation passed, setting loading state`);
       setIsLoading(true);
 
       if (isSignUp) {
+        console.log(`[AUTH_UI] ${uiId} - Calling signUp function`);
         const result = await signUp(email.trim(), password, displayName.trim());
+        console.log(`[AUTH_UI] ${uiId} - SignUp result:`, {
+          success: !result.error,
+          hasUser: !!result.user,
+          errorCode: result.error?.code,
+          errorMessage: result.error?.message
+        });
+        
         if (result.error) {
+          console.error(`[AUTH_UI] ${uiId} - SignUp failed, showing alert`);
           Alert.alert('Sign Up Failed', result.error.message);
         } else {
+          console.log(`[AUTH_UI] ${uiId} - SignUp successful, showing success alert`);
           Alert.alert('Success', 'Account created successfully! Welcome to MindMend!');
         }
       } else {
+        console.log(`[AUTH_UI] ${uiId} - Calling signIn function`);
         const result = await signIn(email.trim(), password);
+        console.log(`[AUTH_UI] ${uiId} - SignIn result:`, {
+          success: !result.error,
+          hasUser: !!result.user,
+          errorCode: result.error?.code,
+          errorMessage: result.error?.message
+        });
+        
         if (result.error) {
+          console.error(`[AUTH_UI] ${uiId} - SignIn failed, showing alert`);
           Alert.alert('Sign In Failed', result.error.message);
+        } else {
+          console.log(`[AUTH_UI] ${uiId} - SignIn successful`);
         }
       }
     } catch (error) {
+      console.error(`[AUTH_UI] ${uiId} - Unexpected error in handleAuth:`, error);
       Alert.alert(
         'Error',
         'Something went wrong. Please check your connection and try again.'
       );
     } finally {
+      console.log(`[AUTH_UI] ${uiId} - Clearing loading state`);
       setIsLoading(false);
     }
   };

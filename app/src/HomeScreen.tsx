@@ -21,9 +21,11 @@ import { apiClient, Habit, HabitEvent, Streak, isApiError, handleApiError } from
 interface HabitWithStreak extends Habit {
   streak?: number;
   completedToday?: boolean;
+  skippedToday?: boolean;
   suggestedTime?: string;
   isOverdue?: boolean;
   todayEventId?: string; // Store the event ID for today's completion to enable uncompleting
+  skipEventId?: string; // Store the event ID for today's skip/relapse to enable untoggling
 }
 
 interface TodaysProgress {
@@ -33,7 +35,7 @@ interface TodaysProgress {
   motivationalMessage?: string;
 }
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }: { navigation: any }) {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [habits, setHabits] = useState<HabitWithStreak[]>([]);
   const [todaysProgress, setTodaysProgress] = useState<TodaysProgress>({
@@ -112,21 +114,25 @@ export default function HomeScreen() {
         streakMap.set(streak.habitId, streak);
       });
 
-      // Create a map of completed habits today with their event IDs
+      // Create maps of today's events by type
       const completedToday = new Map<string, string>();
-      console.log('Today\'s events:', eventsData);
+      const skippedToday = new Map<string, string>();
+      
       eventsData.forEach((event: any) => {
         if (event.eventType === 'COMPLETED') {
           completedToday.set(event.habitId, event.id);
+        } else if (event.eventType === 'SKIPPED' || event.eventType === 'RELAPSED') {
+          skippedToday.set(event.habitId, event.id);
         }
       });
-      console.log('Completed today map:', Array.from(completedToday.entries()));
 
       // Combine habits with their streak data and completion status
       const habitsWithStreak: HabitWithStreak[] = habitsData.map((habit: any) => {
         const streak = streakMap.get(habit.id);
         const todayEventId = completedToday.get(habit.id);
+        const skipEventId = skippedToday.get(habit.id);
         const completedTodayFlag = !!todayEventId;
+        const skippedTodayFlag = !!skipEventId;
         
         // Generate suggested times based on habit type and title
         let suggestedTime = '';
@@ -145,7 +151,9 @@ export default function HomeScreen() {
           ...habit,
           streak: streak?.currentStreak || 0,
           completedToday: completedTodayFlag,
+          skippedToday: skippedTodayFlag,
           todayEventId,
+          skipEventId,
           suggestedTime,
           isOverdue: false, // Simplified for now
         };
@@ -299,6 +307,98 @@ export default function HomeScreen() {
     }
   }, [habits, animatedValues, refreshStreaks]);
 
+  // Skip or fail a habit (breaks streak)
+  const skipHabit = useCallback(async (habitId: string, habitType: 'BUILD' | 'AVOID') => {
+    try {
+      const currentHabit = habits.find(h => h.id === habitId);
+      if (!currentHabit || currentHabit.completedToday) return; // Can't skip if already completed
+
+      // Determine event type based on habit type
+      const eventType = habitType === 'BUILD' ? 'SKIPPED' : 'RELAPSED';
+      const eventNotes = habitType === 'BUILD' ? 'Skipped habit for today' : 'Relapsed on avoiding habit';
+
+      // Animate the skip action
+      const animatedValue = animatedValues[habitId];
+      if (animatedValue) {
+        Animated.sequence([
+          Animated.timing(animatedValue, {
+            toValue: 0.9,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animatedValue, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+
+      // Vibrate for tactile feedback
+      Vibration.vibrate(50);
+
+      // Log skip event in backend
+      const response = await apiClient.logHabitEvent({
+        habitId,
+        eventType,
+        notes: eventNotes,
+      });
+
+      if (isApiError(response)) {
+        throw new Error(handleApiError(response));
+      }
+
+      // Reload habits to get fresh data with skip status
+      await loadHabits();
+
+    } catch (error) {
+      console.error('Failed to skip habit:', error);
+      Alert.alert('Error', 'Failed to update habit. Please try again.');
+    }
+  }, [habits, animatedValues, refreshStreaks]);
+
+  // Undo skip/relapse (un-toggle skipped state)
+  const undoSkip = useCallback(async (habitId: string) => {
+    try {
+      const currentHabit = habits.find(h => h.id === habitId);
+      if (!currentHabit || !currentHabit.skipEventId) return;
+
+      // Animate the undo action
+      const animatedValue = animatedValues[habitId];
+      if (animatedValue) {
+        Animated.sequence([
+          Animated.timing(animatedValue, {
+            toValue: 0.9,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animatedValue, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+
+      // Vibrate for tactile feedback
+      Vibration.vibrate(50);
+
+      // Delete the skip/relapse event
+      const response = await apiClient.deleteHabitEvent(currentHabit.skipEventId);
+      
+      if (isApiError(response)) {
+        throw new Error(handleApiError(response));
+      }
+
+      // Reload habits to get fresh data
+      await loadHabits();
+
+    } catch (error) {
+      console.error('Failed to undo skip:', error);
+      Alert.alert('Error', 'Failed to undo. Please try again.');
+    }
+  }, [habits, animatedValues, loadHabits]);
+
   // Create a new habit
   const createHabit = useCallback(async () => {
     if (!newHabitTitle.trim()) {
@@ -336,6 +436,11 @@ export default function HomeScreen() {
       setIsCreatingHabit(false);
     }
   }, [newHabitTitle, newHabitDescription, newHabitType, loadHabits]);
+
+  // Navigate to morning check-in
+  const startMorningCheckIn = useCallback(() => {
+    navigation.navigate('Check-In');
+  }, [navigation]);
 
   // Load habits when authenticated
   useEffect(() => {
@@ -394,6 +499,11 @@ export default function HomeScreen() {
         {todaysProgress.motivationalMessage && (
           <Text style={styles.motivation}>{todaysProgress.motivationalMessage}</Text>
         )}
+        
+        {/* Start Day Button */}
+        <TouchableOpacity style={styles.startDayButton} onPress={startMorningCheckIn}>
+          <Text style={styles.startDayButtonText}>🌅 Start Day Check-In</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Daily Insight */}
@@ -435,57 +545,119 @@ export default function HomeScreen() {
         )}
         renderItem={({ item }) => {
           const isCompleted = item.completedToday || false;
+          const isSkipped = item.skippedToday || false;
           const isOverdue = item.isOverdue || false;
           
           return (
             <Animated.View 
               style={[
-                styles.habitRow,
+                styles.habitCard,
                 item.habitType === 'BUILD' ? styles.buildHabit : styles.breakHabit,
                 isOverdue && styles.overdueHabit,
-                isCompleted && styles.habitRowCompleted,
+                isCompleted && styles.habitCardCompleted,
+                isSkipped && styles.habitCardSkipped,
                 { transform: [{ scale: animatedValues[item.id] || new Animated.Value(1) }] }
               ]}
             >
-              <Text style={styles.habitIcon}>
-                {item.habitType === 'BUILD' ? '💪' : '🚫'}
-              </Text>
-              
-              {item.habitType === 'BUILD' ? (
-                <TouchableOpacity 
-                  style={[styles.checkbox, isCompleted && styles.checkboxCompleted]}
-                  onPress={() => toggleHabitCompletion(item.id, item.habitType)}
-                  activeOpacity={0.7}
-                >
-                  {isCompleted && <Text style={styles.checkmark}>✓</Text>}
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity 
-                  style={[styles.avoidTag, isCompleted && styles.avoidTagCompleted]}
-                  onPress={() => toggleHabitCompletion(item.id, item.habitType)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.avoidTagText, isCompleted && styles.avoidTagTextCompleted]}>
-                    {isCompleted ? 'Avoided ✓' : 'Avoid'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              
-              <View style={styles.habitInfo}>
-                <View style={styles.habitNameRow}>
-                  <Text style={[styles.habitName, isCompleted && styles.habitNameCompleted]}>
-                    {item.title}
-                  </Text>
-                  {item.streak && item.streak > 0 && (
-                    <View style={styles.streakBadge}>
-                      <Text style={styles.streakText}>🔥 {item.streak} day{item.streak > 1 ? 's' : ''}</Text>
-                    </View>
-                  )}
-                </View>
+              {/* Header with title and streak */}
+              <View style={styles.habitHeader}>
+                <Text style={[
+                  styles.habitTitle, 
+                  isCompleted && styles.habitTitleCompleted,
+                  isSkipped && styles.habitTitleSkipped
+                ]}>
+                  {item.title}
+                </Text>
+                {item.streak && item.streak > 0 && (
+                  <View style={styles.streakBadge}>
+                    <Text style={styles.streakText}>
+                      🔥 {item.streak} day{item.streak > 1 ? 's' : ''} {item.habitType === 'AVOID' ? 'clean' : 'streak'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Description and time */}
+              <View style={styles.habitDetails}>
                 <Text style={styles.habitDescription}>{item.description}</Text>
                 <Text style={[styles.habitTime, isOverdue && styles.habitTimeOverdue]}>
                   {`${item.suggestedTime}${isOverdue ? ' (Missed)' : ''}`}
                 </Text>
+              </View>
+
+              {/* Actions at bottom */}
+              <View style={styles.habitActions}>
+                <View style={styles.habitTypeIndicator}>
+                  <Text style={styles.habitTypeText}>
+                    {item.habitType === 'BUILD' ? 'Build' : 'Break'}
+                  </Text>
+                </View>
+                
+                {item.habitType === 'BUILD' ? (
+                  <>
+                    {isSkipped ? (
+                      <TouchableOpacity 
+                        style={styles.skippedStatus}
+                        onPress={() => undoSkip(item.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.skippedStatusText}>Skipped ✕</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <>
+                        <TouchableOpacity 
+                          style={[styles.checkbox, isCompleted && styles.checkboxCompleted]}
+                          onPress={() => toggleHabitCompletion(item.id, item.habitType)}
+                          activeOpacity={0.7}
+                        >
+                          {isCompleted && <Text style={styles.checkmark}>✓</Text>}
+                        </TouchableOpacity>
+                        {!isCompleted && (
+                          <TouchableOpacity 
+                            style={styles.skipButton}
+                            onPress={() => skipHabit(item.id, item.habitType)}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={styles.skipButtonText}>Skip</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {isSkipped ? (
+                      <TouchableOpacity 
+                        style={styles.relapsedStatus}
+                        onPress={() => undoSkip(item.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.relapsedStatusText}>Relapsed ✕</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <>
+                        <TouchableOpacity 
+                          style={[styles.avoidTag, isCompleted && styles.avoidTagCompleted]}
+                          onPress={() => toggleHabitCompletion(item.id, item.habitType)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.avoidTagText, isCompleted && styles.avoidTagTextCompleted]}>
+                            {isCompleted ? 'Avoided ✓' : 'Avoid'}
+                          </Text>
+                        </TouchableOpacity>
+                        {!isCompleted && (
+                          <TouchableOpacity 
+                            style={styles.relapseButton}
+                            onPress={() => skipHabit(item.id, item.habitType)}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={styles.relapseButtonText}>Relapse</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
               </View>
             </Animated.View>
           );
@@ -622,6 +794,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
+  startDayButton: {
+    backgroundColor: '#4F8EF7',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+    marginTop: 16,
+    shadowColor: '#4F8EF7',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  startDayButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   insightSection: {
     marginBottom: 20,
     padding: 16,
@@ -651,9 +840,7 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  habitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  habitCard: {
     backgroundColor: '#fff',
     padding: 16,
     marginBottom: 12,
@@ -680,14 +867,14 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     borderWidth: 2,
     borderColor: '#D1D5DB',
-    marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FAFAFA',
   },
   checkboxCompleted: {
     backgroundColor: '#10B981',
@@ -702,19 +889,137 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#FEE2E2',
-    marginRight: 12,
+    backgroundColor: '#EBF8FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
   },
   avoidTagCompleted: {
     backgroundColor: '#DCFCE7',
+    borderColor: '#BBF7D0',
   },
   avoidTagText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#EF4444',
+    color: '#0369A1',
   },
   avoidTagTextCompleted: {
     color: '#059669',
+  },
+  skipButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+  },
+  skipButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  relapseButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+  },
+  relapseButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  // Skipped/relapsed card states
+  habitCardSkipped: {
+    backgroundColor: '#FEF2F2',
+    opacity: 0.8,
+    borderLeftColor: '#DC2626',
+  },
+  // Status displays for skipped/relapsed habits (tappable to undo)
+  skippedStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    shadowColor: '#DC2626',
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  skippedStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  relapsedStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    shadowColor: '#DC2626',
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  relapsedStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  // New card layout styles
+  habitHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  habitTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    flex: 1,
+    marginRight: 12,
+  },
+  habitTitleCompleted: {
+    color: '#6B7280',
+    textDecorationLine: 'line-through',
+  },
+  habitTitleSkipped: {
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
+  },
+  habitDetails: {
+    marginBottom: 16,
+  },
+  // Updated actions styling
+  habitActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 12,
+  },
+  habitTypeIndicator: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  habitTypeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  // Legacy styles (kept for backward compatibility)
+  habitNameSkipped: {
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
   },
   habitInfo: {
     flex: 1,
@@ -761,7 +1066,7 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontWeight: '600',
   },
-  habitRowCompleted: {
+  habitCardCompleted: {
     backgroundColor: '#F0FDF4',
     opacity: 0.9,
   },

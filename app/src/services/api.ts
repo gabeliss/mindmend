@@ -1,9 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// API Configuration
-const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:3000/api'  // Development
-  : 'https://your-backend-api.com/api'; // Production - Update with your actual backend URL
+// API Configuration - Choose the right URL for your testing environment
+const getApiBaseUrl = () => {
+  if (!__DEV__) {
+    return 'https://your-backend-api.com/api'; // Production
+  }
+  
+  // Development URLs - uncomment the one that works for your setup:
+  
+  // For iOS Simulator:
+  // return 'http://localhost:3000/api';
+  
+  // For Android Emulator:
+  // return 'http://10.0.2.2:3000/api';
+  
+  // For Physical Device (using your computer's IP):
+  return 'http://192.168.0.35:3000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Types for API responses
 export interface ApiResponse<T> {
@@ -131,6 +146,9 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    const startTime = Date.now();
+    
     try {
       const url = `${this.baseURL}${endpoint}`;
       const headers: { [key: string]: string } = {
@@ -142,26 +160,73 @@ class ApiClient {
         headers['Authorization'] = `Bearer ${this.authToken}`;
       }
 
+      // Log request details
+      console.log(`[API] ${requestId} - Starting ${options.method || 'GET'} request to ${endpoint}`);
+      console.log(`[API] ${requestId} - Full URL: ${url}`);
+      console.log(`[API] ${requestId} - Headers:`, {
+        ...headers,
+        Authorization: this.authToken ? `Bearer ${this.authToken.substring(0, 10)}...` : 'None'
+      });
+      
+      if (options.body) {
+        try {
+          const bodyData = JSON.parse(options.body as string);
+          console.log(`[API] ${requestId} - Request body:`, {
+            ...bodyData,
+            password: bodyData.password ? '***REDACTED***' : undefined
+          });
+        } catch {
+          console.log(`[API] ${requestId} - Request body: [Non-JSON data]`);
+        }
+      }
+
       const response = await fetch(url, {
         ...options,
         headers,
       });
 
-      const responseData = await response.json();
+      const duration = Date.now() - startTime;
+      console.log(`[API] ${requestId} - Response received in ${duration}ms`);
+      console.log(`[API] ${requestId} - Status: ${response.status} ${response.statusText}`);
+      console.log(`[API] ${requestId} - Response headers:`, Object.fromEntries(response.headers.entries()));
 
-      if (!response.ok) {
+      let responseData;
+      try {
+        responseData = await response.json();
+        console.log(`[API] ${requestId} - Response data:`, responseData);
+      } catch (parseError) {
+        console.error(`[API] ${requestId} - Failed to parse response as JSON:`, parseError);
+        console.log(`[API] ${requestId} - Raw response text:`, await response.text());
         return {
           success: false,
-          error: responseData.message || responseData.error || 'Request failed',
+          error: 'Invalid response format from server',
         };
       }
 
+      if (!response.ok) {
+        const errorMessage = responseData.message || responseData.error || 'Request failed';
+        console.error(`[API] ${requestId} - Request failed with status ${response.status}:`, errorMessage);
+        console.error(`[API] ${requestId} - Full error response:`, responseData);
+        
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+
+      console.log(`[API] ${requestId} - Request successful`);
       return {
         success: true,
         data: responseData.data || responseData,
       };
     } catch (error) {
-      console.error('API request failed:', error);
+      const duration = Date.now() - startTime;
+      console.error(`[API] ${requestId} - Request failed after ${duration}ms:`, error);
+      
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        console.error(`[API] ${requestId} - Network error - check if backend is running at ${this.baseURL}`);
+      }
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',

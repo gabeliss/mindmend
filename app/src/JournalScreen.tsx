@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useAuth } from './services/auth';
 import { apiClient, JournalEntry, AIInsight, isApiError, handleApiError } from './services/api';
 
@@ -36,7 +37,7 @@ export default function JournalScreen() {
   const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<'write' | 'history' | 'insights'>('write');
   const [journalContent, setJournalContent] = useState('');
-  const [selectedMood, setSelectedMood] = useState<number>(5);
+  const [selectedMood, setSelectedMood] = useState<number>(5.0);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [moodCalendar, setMoodCalendar] = useState<MoodDay[]>([]);
@@ -143,7 +144,7 @@ export default function JournalScreen() {
 
       const response = await apiClient.createJournalEntry({
         content: journalContent.trim(),
-        moodRating: selectedMood,
+        moodRating: Math.round(selectedMood),
       });
 
       if (isApiError(response)) {
@@ -152,7 +153,7 @@ export default function JournalScreen() {
 
       // Clear form
       setJournalContent('');
-      setSelectedMood(5);
+      setSelectedMood(5.0);
       
       // Refresh entries
       await loadJournalEntries();
@@ -242,20 +243,26 @@ export default function JournalScreen() {
         
         {/* Mood Selector */}
         <View style={styles.moodSelector}>
-          <Text style={styles.moodLabel}>Mood Rating: {selectedMood}/10</Text>
-          <View style={styles.moodSlider}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(mood => (
-              <TouchableOpacity
-                key={mood}
-                style={[
-                  styles.moodOption,
-                  selectedMood === mood && styles.selectedMoodOption
-                ]}
-                onPress={() => setSelectedMood(mood)}
-              >
-                <Text style={styles.moodEmoji}>{moodEmojis[mood]}</Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={styles.moodLabel}>Mood Rating: {selectedMood.toFixed(1)}/10</Text>
+          <View style={styles.sliderContainer}>
+            <View style={styles.sliderLabels}>
+              <Text style={styles.sliderLabelText}>😢 Low</Text>
+              <Text style={styles.sliderLabelText}>High 🥳</Text>
+            </View>
+            <Slider
+              style={styles.slider}
+              minimumValue={1}
+              maximumValue={10}
+              value={selectedMood}
+              onValueChange={(value: number) => setSelectedMood(Math.round(value * 10) / 10)}
+              minimumTrackTintColor="#4F8EF7"
+              maximumTrackTintColor="#E2E8F0"
+              thumbStyle={styles.sliderThumb}
+              trackStyle={styles.sliderTrack}
+            />
+            <View style={styles.moodIndicator}>
+              <Text style={styles.moodIndicatorEmoji}>{moodEmojis[Math.round(selectedMood)]}</Text>
+            </View>
           </View>
         </View>
 
@@ -502,23 +509,39 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
-  moodSlider: {
+  sliderContainer: {
+    marginTop: 8,
+  },
+  sliderLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sliderLabelText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+    marginBottom: 16,
+  },
+  sliderThumb: {
+    backgroundColor: '#4F8EF7',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  sliderTrack: {
+    height: 6,
+    borderRadius: 3,
+  },
+  moodIndicator: {
     alignItems: 'center',
   },
-  moodOption: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F7FAFC',
-  },
-  selectedMoodOption: {
-    backgroundColor: '#E6F3FF',
-    borderColor: '#4F8EF7',
-    borderWidth: 2,
-  },
-  moodEmoji: {
-    fontSize: 24,
+  moodIndicatorEmoji: {
+    fontSize: 32,
   },
   journalInputContainer: {
     backgroundColor: '#fff',
