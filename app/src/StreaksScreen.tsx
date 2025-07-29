@@ -3,11 +3,12 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  ScrollView, 
   ActivityIndicator,
   Alert,
   RefreshControl 
 } from 'react-native';
+// @ts-ignore
+import { ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from './services/auth';
 import { apiClient, Streak, isApiError, handleApiError } from './services/api';

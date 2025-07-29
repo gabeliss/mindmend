@@ -11,12 +11,11 @@ import {
   Alert,
   RefreshControl,
   Modal,
-  TextInput,
-  Switch
+  TextInput
 } from 'react-native';
-import { Colors, Typography, CoachingCopy, Spacing, BorderRadius, Shadows } from './lib/design-system';
+import { CoachingCopy } from './lib/design-system';
 import { useAuth } from './services/auth';
-import { apiClient, Habit, HabitEvent, Streak, isApiError, handleApiError } from './services/api';
+import { apiClient, Habit, isApiError, handleApiError } from './services/api';
 
 interface HabitWithStreak extends Habit {
   streak?: number;
@@ -517,7 +516,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
       {/* Habits List */}
       <FlatList
         data={habits}
-        keyExtractor={item => item.id}
+        keyExtractor={(item: HabitWithStreak) => item.id}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -543,7 +542,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
             </TouchableOpacity>
           ) : null
         )}
-        renderItem={({ item }) => {
+        renderItem={({ item }: { item: HabitWithStreak }) => {
           const isCompleted = item.completedToday || false;
           const isSkipped = item.skippedToday || false;
           const isOverdue = item.isOverdue || false;
