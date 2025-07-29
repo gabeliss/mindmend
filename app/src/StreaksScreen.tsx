@@ -369,8 +369,7 @@ export default function StreaksScreen() {
                   styles.dayCircle,
                   day.isCompleted && styles.completedDay,
                   day.isSkipped && styles.skippedDay,
-                  day.isToday && styles.todayCircle,
-                  day.isEditable && styles.editableDay
+                  day.isToday && styles.todayCircle
                 ]}
                 onPress={() => handleDayTap(day, streak)}
                 disabled={!day.isEditable}
@@ -1045,13 +1044,6 @@ const styles = StyleSheet.create({
   todayText: {
     color: '#4F8EF7',
     fontWeight: '700',
-  },
-  // Editable day styling
-  editableDay: {
-    shadowColor: '#4F8EF7',
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
   },
   // Modal styles
   modalContainer: {
