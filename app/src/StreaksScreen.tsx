@@ -5,7 +5,10 @@ import {
   StyleSheet, 
   ActivityIndicator,
   Alert,
-  RefreshControl 
+  RefreshControl,
+  TouchableOpacity,
+  Modal,
+  TextInput
 } from 'react-native';
 // @ts-ignore
 import { ScrollView } from 'react-native';
@@ -45,6 +48,13 @@ export default function StreaksScreen() {
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Edit past habit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Streak | null>(null);
+  const [editingDate, setEditingDate] = useState<string>('');
+  const [editableEvents, setEditableEvents] = useState<any[]>([]);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Load streaks and calculate stats
   const loadStreaks = useCallback(async () => {
@@ -322,12 +332,21 @@ export default function StreaksScreen() {
         event.occurredAt.startsWith(dateString)
       );
       
+      // Check if this habit was skipped/failed on this specific date
+      const wasSkipped = recentEvents.some(event => 
+        event.habitId === streak.habitId && 
+        (event.eventType === 'SKIPPED' || event.eventType === 'RELAPSED') &&
+        event.occurredAt.startsWith(dateString)
+      );
       
       days.push({
         date: date.getDate(),
         dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
         isCompleted: wasCompleted,
-        isToday: i === 0
+        isSkipped: wasSkipped,
+        isToday: i === 0,
+        isEditable: i > 0 && i <= 6, // Can edit past 6 days, but not today
+        fullDate: dateString
       });
     }
     
@@ -345,25 +364,43 @@ export default function StreaksScreen() {
           {calendarData.map((day, index) => (
             <View key={index} style={styles.calendarDay}>
               <Text style={styles.dayName}>{day.dayName}</Text>
-              <View style={[
-                styles.dayCircle,
-                day.isCompleted && styles.completedDay,
-                day.isToday && styles.todayCircle
-              ]}>
+              <TouchableOpacity 
+                style={[
+                  styles.dayCircle,
+                  day.isCompleted && styles.completedDay,
+                  day.isSkipped && styles.skippedDay,
+                  day.isToday && styles.todayCircle,
+                  day.isEditable && styles.editableDay
+                ]}
+                onPress={() => handleDayTap(day, streak)}
+                disabled={!day.isEditable}
+                activeOpacity={day.isEditable ? 0.7 : 1}
+              >
                 <Text style={[
                   styles.dayNumber,
                   day.isCompleted && styles.completedDayText,
-                  day.isToday && styles.todayText
+                  day.isSkipped && styles.skippedDayText,
+                  day.isToday && !day.isCompleted && !day.isSkipped && styles.todayText
                 ]}>
                   {day.date}
                 </Text>
-              </View>
+              </TouchableOpacity>
             </View>
           ))}
         </View>
       </View>
     );
   };
+
+  // Handle day tap for editing past habits
+  const handleDayTap = useCallback((day: any, streak: Streak) => {
+    if (!day.isEditable) return;
+    
+    setEditingHabit(streak);
+    setEditingDate(day.fullDate);
+    setEditableEvents([...recentEvents]); // Copy current events for local editing
+    setShowEditModal(true);
+  }, [recentEvents]);
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -384,11 +421,14 @@ export default function StreaksScreen() {
     useCallback(() => {
       if (isAuthenticated && user) {
         // Force refresh with a small delay to ensure backend has processed any recent changes
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           loadStreaks();
         }, 200);
+        
+        // Cleanup timeout if screen unfocuses quickly
+        return () => clearTimeout(timeoutId);
       }
-    }, [isAuthenticated, user, loadStreaks])
+    }, [isAuthenticated, user])
   );
 
   // Render stats overview
@@ -518,6 +558,74 @@ export default function StreaksScreen() {
     </View>
   );
 
+  // Get current event status for the editing date
+  const getCurrentEventStatus = () => {
+    if (!editingHabit || !editingDate) return null;
+    
+    const existingEvent = editableEvents.find(event => 
+      event.habitId === editingHabit.habitId && 
+      event.occurredAt.startsWith(editingDate)
+    );
+    
+    return existingEvent?.eventType || null;
+  };
+
+  // Handle edit action (completed, skipped, avoided, relapsed)
+  const handleEditAction = useCallback(async (action: 'COMPLETED' | 'SKIPPED' | 'RELAPSED' | null) => {
+    if (!editingHabit || !editingDate) return;
+
+    setIsSavingEdit(true);
+    
+    try {
+      const existingEvent = editableEvents.find(event => 
+        event.habitId === editingHabit.habitId && 
+        event.occurredAt.startsWith(editingDate)
+      );
+
+      if (action === null) {
+        // Remove event if it exists
+        if (existingEvent) {
+          const response = await apiClient.deleteHabitEvent(existingEvent.id);
+          if (isApiError(response)) {
+            throw new Error(handleApiError(response));
+          }
+        }
+      } else {
+        if (existingEvent) {
+          // Delete existing event first
+          const deleteResponse = await apiClient.deleteHabitEvent(existingEvent.id);
+          if (isApiError(deleteResponse)) {
+            throw new Error(handleApiError(deleteResponse));
+          }
+        }
+        
+        // Create new event
+        const response = await apiClient.logHabitEvent({
+          habitId: editingHabit.habitId,
+          eventType: action,
+          notes: action === 'COMPLETED' ? 'Completed habit' : 
+                 action === 'SKIPPED' ? 'Skipped habit' : 'Relapsed on habit',
+          occurredAt: editingDate,
+        });
+        if (isApiError(response)) {
+          throw new Error(handleApiError(response));
+        }
+      }
+
+      // Close modal and refresh data
+      setShowEditModal(false);
+      setEditingHabit(null);
+      setEditingDate('');
+      await loadStreaks();
+      
+    } catch (error) {
+      console.error('Failed to update habit event:', error);
+      Alert.alert('Error', 'Failed to update habit log. Please try again.');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }, [editingHabit, editingDate, editableEvents, loadStreaks]);
+
   if (!isAuthenticated) {
     return (
       <View style={[styles.container, styles.centerContent]}>
@@ -536,21 +644,144 @@ export default function StreaksScreen() {
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          colors={['#4F8EF7']}
-          tintColor="#4F8EF7"
-        />
-      }
+    <>
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#4F8EF7']}
+            tintColor="#4F8EF7"
+          />
+        }
+      >
+        {renderStatsOverview()}
+        {renderHabitStreaks()}
+        {renderMilestones()}
+      </ScrollView>
+
+      {/* Edit Modal */}
+      <Modal
+      visible={showEditModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setShowEditModal(false)}
     >
-      {renderStatsOverview()}
-      {renderHabitStreaks()}
-      {renderMilestones()}
-    </ScrollView>
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={() => setShowEditModal(false)}>
+            <Text style={styles.modalCancelButton}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>
+            {editingDate && (() => {
+              const dateObj = new Date(editingDate);
+              return `Log for ${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}?`;
+            })()}
+          </Text>
+          <View style={{ width: 60 }} />
+        </View>
+
+        <View style={styles.editModalContent}>
+          {editingHabit && (
+            <>
+              <View style={styles.habitInfoSection}>
+                <Text style={styles.editHabitTitle}>{editingHabit.habit.title}</Text>
+                <Text style={styles.editHabitType}>
+                  {editingHabit.habit.habitType === 'BUILD' ? '✅ Build Habit' : '🚫 Break Habit'}
+                </Text>
+              </View>
+
+              <View style={styles.actionButtonsContainer}>
+                {editingHabit.habit.habitType === 'BUILD' ? (
+                  <>
+                    <TouchableOpacity 
+                      style={[
+                        styles.actionButton, 
+                        styles.completedActionButton,
+                        getCurrentEventStatus() === 'COMPLETED' && styles.selectedActionButton
+                      ]}
+                      onPress={() => handleEditAction('COMPLETED')}
+                      disabled={isSavingEdit}
+                    >
+                      <Text style={[styles.actionButtonText, styles.completedActionText]}>
+                        ✓ Completed
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[
+                        styles.actionButton, 
+                        styles.skippedActionButton,
+                        getCurrentEventStatus() === 'SKIPPED' && styles.selectedActionButton
+                      ]}
+                      onPress={() => handleEditAction('SKIPPED')}
+                      disabled={isSavingEdit}
+                    >
+                      <Text style={[styles.actionButtonText, styles.skippedActionText]}>
+                        ✕ Skipped
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <TouchableOpacity 
+                      style={[
+                        styles.actionButton, 
+                        styles.completedActionButton,
+                        getCurrentEventStatus() === 'COMPLETED' && styles.selectedActionButton
+                      ]}
+                      onPress={() => handleEditAction('COMPLETED')}
+                      disabled={isSavingEdit}
+                    >
+                      <Text style={[styles.actionButtonText, styles.completedActionText]}>
+                        ✓ Avoided
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[
+                        styles.actionButton, 
+                        styles.skippedActionButton,
+                        getCurrentEventStatus() === 'RELAPSED' && styles.selectedActionButton
+                      ]}
+                      onPress={() => handleEditAction('RELAPSED')}
+                      disabled={isSavingEdit}
+                    >
+                      <Text style={[styles.actionButtonText, styles.skippedActionText]}>
+                        ✕ Relapsed
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.actionButton, 
+                    styles.clearActionButton,
+                    getCurrentEventStatus() === null && styles.selectedActionButton
+                  ]}
+                  onPress={() => handleEditAction(null)}
+                  disabled={isSavingEdit}
+                >
+                  <Text style={[styles.actionButtonText, styles.clearActionText]}>
+                    Clear Log
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {isSavingEdit && (
+                <View style={styles.savingIndicator}>
+                  <ActivityIndicator size="small" color="#4F8EF7" />
+                  <Text style={styles.savingText}>Saving...</Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -792,6 +1023,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
     borderColor: '#10B981',
   },
+  skippedDay: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
   todayCircle: {
     borderColor: '#4F8EF7',
     borderWidth: 2,
@@ -804,8 +1039,113 @@ const styles = StyleSheet.create({
   completedDayText: {
     color: '#fff',
   },
+  skippedDayText: {
+    color: '#fff',
+  },
   todayText: {
     color: '#4F8EF7',
     fontWeight: '700',
+  },
+  // Editable day styling
+  editableDay: {
+    shadowColor: '#4F8EF7',
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    textAlign: 'center',
+    flex: 1,
+  },
+  modalCancelButton: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  editModalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  habitInfoSection: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  editHabitTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  editHabitType: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  actionButtonsContainer: {
+    gap: 16,
+  },
+  actionButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#fff',
+  },
+  selectedActionButton: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#3B82F6',
+  },
+  completedActionButton: {
+    borderColor: '#10B981',
+  },
+  skippedActionButton: {
+    borderColor: '#EF4444',
+  },
+  clearActionButton: {
+    borderColor: '#6B7280',
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  completedActionText: {
+    color: '#10B981',
+  },
+  skippedActionText: {
+    color: '#EF4444',
+  },
+  clearActionText: {
+    color: '#6B7280',
+  },
+  savingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    gap: 8,
+  },
+  savingText: {
+    fontSize: 14,
+    color: '#4F8EF7',
+    fontWeight: '500',
   },
 });

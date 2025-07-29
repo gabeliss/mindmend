@@ -92,7 +92,8 @@ class App {
     }));
 
     // Rate limiting
-    this.app.use(globalRateLimit);
+    // this.app.use(globalRateLimit);
+    // TODO: Only apply rate limiting to specific routes such as heavy AI endpoints
 
     // Body parsing middleware
     this.app.use(express.json({ 

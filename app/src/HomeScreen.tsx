@@ -586,11 +586,6 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 
               {/* Actions at bottom */}
               <View style={styles.habitActions}>
-                <View style={styles.habitTypeIndicator}>
-                  <Text style={styles.habitTypeText}>
-                    {item.habitType === 'BUILD' ? 'Build' : 'Break'}
-                  </Text>
-                </View>
                 
                 {item.habitType === 'BUILD' ? (
                   <>
@@ -605,11 +600,13 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
                     ) : (
                       <>
                         <TouchableOpacity 
-                          style={[styles.checkbox, isCompleted && styles.checkboxCompleted]}
+                          style={[styles.completeTag, isCompleted && styles.completeTagCompleted]}
                           onPress={() => toggleHabitCompletion(item.id, item.habitType)}
                           activeOpacity={0.7}
                         >
-                          {isCompleted && <Text style={styles.checkmark}>✓</Text>}
+                          <Text style={[styles.completeTagText, isCompleted && styles.completeTagTextCompleted]}>
+                            {isCompleted ? 'Completed ✓' : 'Complete'}
+                          </Text>
                         </TouchableOpacity>
                         {!isCompleted && (
                           <TouchableOpacity 
@@ -902,6 +899,26 @@ const styles = StyleSheet.create({
     color: '#0369A1',
   },
   avoidTagTextCompleted: {
+    color: '#059669',
+  },
+  completeTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#EBF8FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  completeTagCompleted: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#BBF7D0',
+  },
+  completeTagText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0369A1',
+  },
+  completeTagTextCompleted: {
     color: '#059669',
   },
   skipButton: {
