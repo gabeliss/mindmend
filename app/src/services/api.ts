@@ -339,6 +339,24 @@ class ApiClient {
     return this.makeRequest<Streak>(`/streaks/${habitId}`);
   }
 
+  async getHabitStreakHistory(habitId: string, days: number = 7): Promise<ApiResponse<{
+    history: Array<{
+      date: string;
+      hasEvent: boolean;
+      eventType?: string;
+      contributes: boolean;
+    }>;
+  }>> {
+    return this.makeRequest<{
+      history: Array<{
+        date: string;
+        hasEvent: boolean;
+        eventType?: string;
+        contributes: boolean;
+      }>;
+    }>(`/streaks/${habitId}/history?days=${days}`);
+  }
+
   // Journal methods
   async getJournalEntries(params?: {
     startDate?: string;

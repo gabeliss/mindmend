@@ -9,21 +9,21 @@ const router = Router();
 router.get('/', authenticateToken, StreakController.getUserStreakSummary);
 
 // GET /api/streaks/dashboard - Get comprehensive streak dashboard data
-router.get('/dashboard', StreakController.getStreakDashboard);
+router.get('/dashboard', authenticateToken, StreakController.getStreakDashboard);
 
 // GET /api/streaks/summary - Get streak summary for all user habits
-router.get('/summary', StreakController.getUserStreakSummary);
+router.get('/summary', authenticateToken, StreakController.getUserStreakSummary);
 
 // GET /api/streaks/leaderboard - Get streak leaderboard (top performing habits)
-router.get('/leaderboard', StreakController.getStreakLeaderboard);
+router.get('/leaderboard', authenticateToken, StreakController.getStreakLeaderboard);
 
 // GET /api/streaks/insights - Get streak insights and achievements
-router.get('/insights', StreakController.getStreakInsights);
+router.get('/insights', authenticateToken, StreakController.getStreakInsights);
 
 // GET /api/streaks/:habitId - Get streak data for a specific habit
-router.get('/:habitId', validateUUID('habitId'), StreakController.getHabitStreak);
+router.get('/:habitId', authenticateToken, validateUUID('habitId'), StreakController.getHabitStreak);
 
 // GET /api/streaks/:habitId/history - Get streak history for a habit (calendar view)
-router.get('/:habitId/history', validateUUID('habitId'), StreakController.getHabitStreakHistory);
+router.get('/:habitId/history', authenticateToken, validateUUID('habitId'), StreakController.getHabitStreakHistory);
 
 export default router;

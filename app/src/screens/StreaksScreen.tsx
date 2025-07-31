@@ -15,7 +15,7 @@ import {
   getStreakColor, 
   getTodayStatus, 
   getStreakStatus, 
-  generateCalendarData 
+  generateCalendarDataFromHistory 
 } from '../utils';
 import { StatsOverview, HabitStreakCard, MilestonesGrid, EditHabitModal } from '../components/streaks';
 
@@ -26,6 +26,7 @@ export default function StreaksScreen() {
     streakStats,
     milestones,
     recentEvents,
+    streakHistories,
     isLoading,
     loadStreaks,
     handleEditAction,
@@ -91,13 +92,19 @@ export default function StreaksScreen() {
       ) : (
         streaks.map((streak) => {
           const todayStatus = getTodayStatus(streak, recentEvents);
-          const todayStatusIcon = todayStatus === 'completed' ? '🔥' : todayStatus === 'skipped' ? '⭕' : '⏳';
+          const todayStatusIcon = todayStatus === 'completed' ? '🔥' : todayStatus === 'skipped' ? '💔' : '⏳';
+          
+          // Use timezone-aware calendar data
+          const historyData = streakHistories.get(streak.habitId);
+          const calendarData = historyData 
+            ? generateCalendarDataFromHistory(historyData)
+            : []; // Empty array if no history data is available yet
           
           return (
             <HabitStreakCard
               key={streak.habitId}
               streak={streak}
-              calendarData={generateCalendarData(streak, recentEvents)}
+              calendarData={calendarData}
               streakColor={getStreakColor(streak.currentStreak)}
               streakStatus={getStreakStatus(streak, recentEvents)}
               todayStatusIcon={todayStatusIcon}

@@ -5,8 +5,7 @@ import {
   calculateStreakStats, 
   generateMilestones, 
   StreakStats, 
-  Milestone,
-  getDateRange 
+  Milestone
 } from '../utils';
 
 export const useStreaks = (isAuthenticated: boolean, user: any) => {
@@ -20,6 +19,7 @@ export const useStreaks = (isAuthenticated: boolean, user: any) => {
   });
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
+  const [streakHistories, setStreakHistories] = useState<Map<string, any[]>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
 
   const loadStreaks = useCallback(async () => {
@@ -30,12 +30,9 @@ export const useStreaks = (isAuthenticated: boolean, user: any) => {
       setIsLoading(true);
       setRecentEvents([]);
 
-      const { startDate, endDate } = getDateRange(6);
-      
-      const [streaksResponse, habitsResponse, eventsResponse, todayEventsResponse] = await Promise.all([
+      const [streaksResponse, habitsResponse, todayEventsResponse] = await Promise.all([
         apiClient.getStreaks(),
         apiClient.getHabits(),
-        apiClient.getHabitEvents({ startDate, endDate }),
         apiClient.getTodayEvents(),
       ]);
 
@@ -47,24 +44,15 @@ export const useStreaks = (isAuthenticated: boolean, user: any) => {
         throw new Error(handleApiError(habitsResponse));
       }
 
-      if (isApiError(eventsResponse)) {
-        throw new Error(handleApiError(eventsResponse));
-      }
-
       if (isApiError(todayEventsResponse)) {
         throw new Error(handleApiError(todayEventsResponse));
       }
 
       const streaksData = streaksResponse.data?.habitStreaks || [];
       const habitsData = habitsResponse.data?.habits || [];
-      const eventsData = eventsResponse.data?.events || [];
       const todayEventsData = todayEventsResponse.data?.events || [];
 
-      const eventIds = new Set(eventsData.map((e: any) => e.id));
-      const additionalTodayEvents = todayEventsData.filter((e: any) => !eventIds.has(e.id));
-      const allEvents = [...eventsData, ...additionalTodayEvents];
-
-      setRecentEvents(allEvents);
+      setRecentEvents(todayEventsData);
 
       const habitMap = new Map();
       habitsData.forEach((habit: any) => {
@@ -77,6 +65,26 @@ export const useStreaks = (isAuthenticated: boolean, user: any) => {
       }));
 
       setStreaks(streaksWithHabits);
+
+      // Fetch timezone-aware streak history for each habit
+      const historyPromises = streaksWithHabits.map(async (streak: any) => {
+        try {
+          const historyResponse = await apiClient.getHabitStreakHistory(streak.habitId, 7);
+          if (!isApiError(historyResponse)) {
+            return { habitId: streak.habitId, history: historyResponse.data?.history || [] };
+          }
+        } catch (error) {
+          console.error(`Failed to load history for habit ${streak.habitId}:`, error);
+        }
+        return { habitId: streak.habitId, history: [] };
+      });
+
+      const historyResults = await Promise.all(historyPromises);
+      const historyMap = new Map();
+      historyResults.forEach(result => {
+        historyMap.set(result.habitId, result.history);
+      });
+      setStreakHistories(historyMap);
 
       const stats = calculateStreakStats(streaksData);
       setStreakStats(stats);
@@ -123,12 +131,27 @@ export const useStreaks = (isAuthenticated: boolean, user: any) => {
           }
         }
         
+        // Create a timestamp using the selected date but with current time
+        // This ensures the event is recorded on the correct date in the user's timezone
+        const now = new Date();
+        const selectedDate = new Date(editingDate + 'T00:00:00');
+        
+        const occurredAtTimestamp = new Date(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          selectedDate.getDate(),
+          now.getHours(),
+          now.getMinutes(),
+          now.getSeconds(),
+          now.getMilliseconds()
+        );
+        
         const response = await apiClient.logHabitEvent({
           habitId,
           eventType: action,
           notes: action === 'COMPLETED' ? 'Completed habit' : 
                  action === 'SKIPPED' ? 'Skipped habit' : 'Relapsed on habit',
-          occurredAt: editingDate,
+          occurredAt: occurredAtTimestamp.toISOString(),
         });
         if (isApiError(response)) {
           throw new Error(handleApiError(response));
@@ -150,6 +173,7 @@ export const useStreaks = (isAuthenticated: boolean, user: any) => {
     streakStats,
     milestones,
     recentEvents,
+    streakHistories,
     isLoading,
     loadStreaks,
     handleEditAction,

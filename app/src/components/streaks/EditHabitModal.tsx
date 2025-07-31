@@ -39,7 +39,8 @@ export const EditHabitModal: React.FC<EditHabitModalProps> = ({
 }) => {
   const getFormattedDate = () => {
     if (editingDate) {
-      const dateObj = new Date(editingDate);
+      // Use the same timezone-aware parsing as the calendar generation
+      const dateObj = new Date(editingDate + 'T00:00:00');
       return `Log for ${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}?`;
     }
     return '';

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,50 +7,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Users table
 model User {
-  id             String   @id @default(uuid()) @db.Uuid
-  firebaseUid    String   @unique @map("firebase_uid")
-  email          String   @unique
-  displayName    String?  @map("display_name")
-  timezone       String   @default("UTC")
-  coachStyle     CoachStyle @default(SUPPORTIVE) @map("coach_style")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  
-  // Relations
-  habits         Habit[]
-  habitEvents    HabitEvent[]
-  journalEntries JournalEntry[]
-  aiInsights     AIInsight[]
-  dailyStats     DailyStats[]
-  aiUsageStats   AIUsageStats[]
-  aiUsageLogs    AIUsageLog[]
+  id              String          @id @default(uuid()) @db.Uuid
+  firebaseUid     String          @unique @map("firebase_uid")
+  email           String          @unique
+  displayName     String?         @map("display_name")
+  timezone        String          @default("UTC")
+  coachStyle      CoachStyle      @default(SUPPORTIVE) @map("coach_style")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  aiInsights      AIInsight[]
+  aiUsageLogs     AIUsageLog[]
+  aiUsageStats    AIUsageStats[]
+  dailyStats      DailyStats[]
+  habitEvents     HabitEvent[]
+  habits          Habit[]
+  journalEntries  JournalEntry[]
   weeklySummaries WeeklySummary[]
 
   @@map("users")
 }
 
-// Habits table
 model Habit {
-  id          String    @id @default(uuid()) @db.Uuid
-  userId      String    @map("user_id") @db.Uuid
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
   title       String
   description String?
-  habitType   HabitType @map("habit_type")
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  
-  // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitType   HabitType    @map("habit_type")
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
   habitEvents HabitEvent[]
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("habits")
   @@index([userId])
+  @@map("habits")
 }
 
-// Habit Events table (completions, skips, relapses)
 model HabitEvent {
   id         String    @id @default(uuid()) @db.Uuid
   userId     String    @map("user_id") @db.Uuid
@@ -62,35 +52,29 @@ model HabitEvent {
   notes      String?
   occurredAt DateTime  @map("occurred_at")
   createdAt  DateTime  @default(now()) @map("created_at")
-  
-  // Relations
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  habit      Habit     @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("habit_events")
   @@index([userId, habitId])
   @@index([occurredAt])
+  @@map("habit_events")
 }
 
-// Journal Entries table
 model JournalEntry {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  title       String?
-  content     String
-  moodRating  Int?     @map("mood_rating")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  title      String?
+  content    String
+  moodRating Int?     @map("mood_rating")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("journal_entries")
   @@index([userId])
   @@index([createdAt])
+  @@map("journal_entries")
 }
 
-// AI Insights table
 model AIInsight {
   id          String      @id @default(uuid()) @db.Uuid
   userId      String      @map("user_id") @db.Uuid
@@ -102,56 +86,47 @@ model AIInsight {
   shownAt     DateTime?   @map("shown_at")
   createdAt   DateTime    @default(now()) @map("created_at")
   expiresAt   DateTime?   @map("expires_at")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("ai_insights")
   @@index([userId])
   @@index([insightType])
   @@index([createdAt])
+  @@map("ai_insights")
 }
 
-// Daily Stats table
 model DailyStats {
-  id               String   @id @default(uuid()) @db.Uuid
-  userId           String   @map("user_id") @db.Uuid
-  date             DateTime @db.Date
-  habitsCompleted  Int      @default(0) @map("habits_completed")
-  habitsTotal      Int      @default(0) @map("habits_total")
-  journalEntries   Int      @default(0) @map("journal_entries")
-  avgMood          Float?   @map("avg_mood")
-  createdAt        DateTime @default(now()) @map("created_at")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  date            DateTime @db.Date
+  habitsCompleted Int      @default(0) @map("habits_completed")
+  habitsTotal     Int      @default(0) @map("habits_total")
+  journalEntries  Int      @default(0) @map("journal_entries")
+  avgMood         Float?   @map("avg_mood")
+  createdAt       DateTime @default(now()) @map("created_at")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("daily_stats")
   @@unique([userId, date], name: "user_date_unique")
   @@index([userId])
   @@index([date])
+  @@map("daily_stats")
 }
 
-// AI Usage Stats table (monthly aggregates)
 model AIUsageStats {
   id            String   @id @default(uuid()) @db.Uuid
   userId        String   @map("user_id") @db.Uuid
-  month         String   // Format: YYYY-MM
+  month         String
   totalRequests Int      @default(0) @map("total_requests")
   totalTokens   Int      @default(0) @map("total_tokens")
   totalCost     Float    @default(0) @map("total_cost")
   lastUpdated   DateTime @default(now()) @map("last_updated")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("ai_usage_stats")
   @@unique([userId, month], name: "user_month_unique")
   @@index([userId])
   @@index([month])
+  @@map("ai_usage_stats")
 }
 
-// AI Usage Logs table (detailed logs for recent activity)
 model AIUsageLog {
   id               String   @id @default(uuid()) @db.Uuid
   userId           String   @map("user_id") @db.Uuid
@@ -161,43 +136,37 @@ model AIUsageLog {
   totalTokens      Int      @map("total_tokens")
   cost             Float
   createdAt        DateTime @default(now()) @map("created_at")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("ai_usage_logs")
   @@index([userId])
   @@index([createdAt])
+  @@map("ai_usage_logs")
 }
 
-// Weekly Summary table
 model WeeklySummary {
   id              String   @id @default(uuid()) @db.Uuid
   userId          String   @map("user_id") @db.Uuid
-  weekStart       String   @map("week_start") // Format: YYYY-MM-DD
-  weekEnd         String   @map("week_end")   // Format: YYYY-MM-DD
+  weekStart       String   @map("week_start")
+  weekEnd         String   @map("week_end")
   aiSummary       String   @map("ai_summary")
-  statistics      Json     // WeeklyStatistics
-  achievements    Json     // Achievement[]
-  insights        Json     // WeeklyInsight[]
-  recommendations Json     // Recommendation[]
-  moodAnalysis    Json     @map("mood_analysis") // MoodAnalysis
-  habitAnalysis   Json     @map("habit_analysis") // HabitAnalysis
-  comparison      Json?    // WeeklyComparison (optional)
-  predictions     Json?    // WeeklyPredictions (optional)
+  statistics      Json
+  achievements    Json
+  insights        Json
+  recommendations Json
+  moodAnalysis    Json     @map("mood_analysis")
+  habitAnalysis   Json     @map("habit_analysis")
+  comparison      Json?
+  predictions     Json?
   createdAt       DateTime @default(now()) @map("created_at")
   expiresAt       DateTime @map("expires_at")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("weekly_summaries")
   @@unique([userId, weekStart], name: "user_week_unique")
   @@index([userId])
   @@index([weekStart])
+  @@map("weekly_summaries")
 }
 
-// Enums
 enum CoachStyle {
   SUPPORTIVE   @map("supportive")
   DIRECT       @map("direct")

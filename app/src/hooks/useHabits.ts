@@ -158,17 +158,37 @@ export const useHabits = (isAuthenticated: boolean, user: any) => {
       const isCurrentlyCompleted = currentHabit.completedToday;
       console.log(`Toggling habit completion for ${currentHabit.title}, currently completed: ${isCurrentlyCompleted}`);
 
-      setHabits(prevHabits => 
-        prevHabits.map(habit => 
-          habit.id === habitId 
-            ? { 
-                ...habit, 
-                completedToday: !habit.completedToday,
-                todayEventId: !habit.completedToday ? 'temp' : undefined
-              }
-            : habit
-        )
-      );
+      const updatedHabits = habits.map(habit => {
+        if (habit.id === habitId) {
+          const willBeCompleted = !habit.completedToday;
+          return { 
+            ...habit, 
+            completedToday: willBeCompleted,
+            todayEventId: willBeCompleted ? 'temp' : undefined,
+            // Optimistically update streak
+            streak: willBeCompleted 
+              ? (habit.streak || 0) + 1  // Increment streak when completing
+              : Math.max((habit.streak || 0) - 1, 0)  // Decrement streak when uncompleting
+          };
+        }
+        return habit;
+      });
+
+      setHabits(updatedHabits);
+
+      // Update today's progress immediately
+      const completed = updatedHabits.filter(h => h.completedToday).length;
+      const total = updatedHabits.length;
+      const avgStreak = total > 0 
+        ? Math.round(updatedHabits.reduce((sum, h) => sum + (h.streak || 0), 0) / total)
+        : 0;
+
+      setTodaysProgress({
+        completedHabits: completed,
+        totalHabits: total,
+        currentStreak: avgStreak,
+        motivationalMessage: getMotivationalMessage(completed, total, avgStreak),
+      });
 
       const animatedValue = animatedValues[habitId];
       if (animatedValue) {
@@ -192,10 +212,16 @@ export const useHabits = (isAuthenticated: boolean, user: any) => {
         const response = await apiClient.deleteHabitEvent(currentHabit.todayEventId);
         
         if (isApiError(response)) {
+          // Revert optimistic update on error
           setHabits(prevHabits => 
             prevHabits.map(habit => 
               habit.id === habitId 
-                ? { ...habit, completedToday: true, todayEventId: currentHabit.todayEventId }
+                ? { 
+                    ...habit, 
+                    completedToday: true, 
+                    todayEventId: currentHabit.todayEventId,
+                    streak: currentHabit.streak  // Revert streak
+                  }
                 : habit
             )
           );
@@ -209,10 +235,16 @@ export const useHabits = (isAuthenticated: boolean, user: any) => {
         });
 
         if (isApiError(response)) {
+          // Revert optimistic update on error
           setHabits(prevHabits => 
             prevHabits.map(habit => 
               habit.id === habitId 
-                ? { ...habit, completedToday: false, todayEventId: undefined }
+                ? { 
+                    ...habit, 
+                    completedToday: false, 
+                    todayEventId: undefined,
+                    streak: currentHabit.streak  // Revert streak
+                  }
                 : habit
             )
           );
@@ -231,15 +263,11 @@ export const useHabits = (isAuthenticated: boolean, user: any) => {
         }
       }
 
-      // Refresh streaks after a brief delay to ensure backend processing
+      // Refresh streaks in background to sync with backend (no delay needed for UI)
       setTimeout(async () => {
-        console.log('Refreshing streaks after habit completion...');
+        console.log('Syncing streaks with backend...');
         await refreshStreaks();
-        // Also reload full habits data to ensure everything is in sync
-        setTimeout(async () => {
-          await loadHabits();
-        }, 500);
-      }, 3000); // Increased delay to 3 seconds to test if it's a backend timing issue
+      }, 500); // Short delay just to ensure backend has processed
 
     } catch (error) {
       console.error('Failed to toggle habit completion:', error);

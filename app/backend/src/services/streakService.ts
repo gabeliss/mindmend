@@ -285,12 +285,12 @@ export class StreakService {
     let longestStreak = 0;
     let currentStreak = 0;
     
-    for (let i = 0; i < sortedDates.length; i++) {
-      const dateKey = sortedDates[i];
+    // Filter to only contributing dates and iterate through them
+    const contributingDates = [];
+    for (const dateKey of sortedDates) {
       const eventType = eventsByDate.get(dateKey);
-      
-      // Check if this day contributes to the streak
       let contributes = false;
+      
       if (habitType === 'BUILD') {
         contributes = eventType === 'COMPLETED';
       } else { // AVOID
@@ -298,18 +298,35 @@ export class StreakService {
       }
       
       if (contributes) {
-        currentStreak++;
-        longestStreak = Math.max(longestStreak, currentStreak);
-      } else {
-        currentStreak = 0;
+        contributingDates.push(dateKey);
       }
+    }
+    
+    // Now check for consecutive streaks among contributing dates only
+    currentStreak = 0;
+    for (let i = 0; i < contributingDates.length; i++) {
+      if (i === 0) {
+        currentStreak = 1; // First contributing date
+      } else {
+        const prevDate = new Date(contributingDates[i - 1]);
+        const currentDate = new Date(contributingDates[i]);
+        const daysDiff = Math.floor((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff === 1) {
+          currentStreak++; // Consecutive day
+        } else {
+          currentStreak = 1; // Start new streak
+        }
+      }
+      
+      longestStreak = Math.max(longestStreak, currentStreak);
     }
     
     return longestStreak;
   }
   
   // Get streak history for a habit (last 30 days)
-  static async getStreakHistory(habitId: string, userId: string, days: number = 30): Promise<Array<{
+  static async getStreakHistory(habitId: string, userId: string, days: number = 30, userTimezone: string = 'UTC'): Promise<Array<{
     date: string;
     hasEvent: boolean;
     eventType?: string;
@@ -346,10 +363,11 @@ export class StreakService {
         }
       });
       
-      // Group events by date
+      // Group events by date in user's timezone
       const eventsByDate = new Map<string, string>();
       events.forEach(event => {
-        const dateKey = event.occurredAt.toISOString().split('T')[0];
+        const eventDateInUserTz = this.getDateInTimezone(event.occurredAt, userTimezone);
+        const dateKey = eventDateInUserTz.toISOString().split('T')[0];
         if (!eventsByDate.has(dateKey) || 
             (habit.habitType === 'BUILD' && event.eventType === 'COMPLETED') ||
             (habit.habitType === 'AVOID' && event.eventType !== 'RELAPSED')) {
@@ -357,12 +375,13 @@ export class StreakService {
         }
       });
       
-      // Generate history array
+      // Generate history array using user's timezone
       const history = [];
       const currentDate = new Date(endDate);
       
       for (let i = 0; i < days; i++) {
-        const dateKey = currentDate.toISOString().split('T')[0];
+        const currentDateInUserTz = this.getDateInTimezone(currentDate, userTimezone);
+        const dateKey = currentDateInUserTz.toISOString().split('T')[0];
         const eventType = eventsByDate.get(dateKey);
         const hasEvent = !!eventType;
         

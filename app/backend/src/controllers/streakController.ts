@@ -3,6 +3,7 @@ import { StreakService } from '../services/streakService';
 import ResponseHandler from '../utils/response';
 import { AppError } from '../types';
 import { ValidationError } from '../middleware/validation';
+import prisma from '../config/database';
 
 export class StreakController {
   // Get streak data for a specific habit
@@ -74,7 +75,14 @@ export class StreakController {
         throw new ValidationError('Days parameter must be at least 1');
       }
       
-      const history = await StreakService.getStreakHistory(habitId, userId, days);
+      // Get user's timezone from database
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { timezone: true }
+      });
+      const userTimezone = user?.timezone || 'UTC';
+      
+      const history = await StreakService.getStreakHistory(habitId, userId, days, userTimezone);
       
       return ResponseHandler.success(res, {
         history,
