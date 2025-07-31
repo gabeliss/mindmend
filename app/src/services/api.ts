@@ -185,10 +185,10 @@ class ApiClient {
         headers,
       });
 
-      const duration = Date.now() - startTime;
-      console.log(`[API] ${requestId} - Response received in ${duration}ms`);
-      console.log(`[API] ${requestId} - Status: ${response.status} ${response.statusText}`);
-      console.log(`[API] ${requestId} - Response headers:`, Object.fromEntries(response.headers.entries()));
+      // const duration = Date.now() - startTime;
+      // console.log(`[API] ${requestId} - Response received in ${duration}ms`);
+      // console.log(`[API] ${requestId} - Status: ${response.status} ${response.statusText}`);
+      // console.log(`[API] ${requestId} - Response headers:`, Object.fromEntries(response.headers.entries()));
 
       let responseData;
       try {

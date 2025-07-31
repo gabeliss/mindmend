@@ -6,8 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import API-connected screens
-import HomeScreen from './src/HomeScreen';
-import StreaksScreen from './src/StreaksScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import StreaksScreen from './src/screens/StreaksScreen';
 import CheckInScreen from './src/CheckInScreen';
 import JournalScreen from './src/JournalScreen';
 import ProfileScreen from './src/ProfileScreen';

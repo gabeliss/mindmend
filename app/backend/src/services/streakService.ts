@@ -23,14 +23,26 @@ export class StreakService {
   // Calculate current and longest streaks for a specific habit
   static async calculateHabitStreak(habitId: string, userId: string): Promise<StreakData> {
     try {
-      // Verify habit exists and belongs to user
-      const habit = await prisma.habit.findFirst({
-        where: { id: habitId, userId }
-      });
+      // Verify habit exists and belongs to user, and get user timezone
+      const [habit, user] = await Promise.all([
+        prisma.habit.findFirst({
+          where: { id: habitId, userId }
+        }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { timezone: true }
+        })
+      ]);
       
       if (!habit) {
         throw new AppError('Habit not found', 404);
       }
+      
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+      
+      const userTimezone = user.timezone || 'UTC';
       
       // Get all habit events ordered by date (most recent first)
       const events = await prisma.habitEvent.findMany({
@@ -55,21 +67,21 @@ export class StreakService {
       const lastEventDate = events[0].occurredAt;
       
       // Calculate current streak (consecutive days from today backward)
-      const currentStreak = this.calculateCurrentStreak(events, habit.habitType);
+      const currentStreak = this.calculateCurrentStreak(events, habit.habitType, userTimezone);
       
       // Calculate longest streak in history
-      const longestStreak = this.calculateLongestStreak(events, habit.habitType);
+      const longestStreak = this.calculateLongestStreak(events, habit.habitType, userTimezone);
       
       // Determine streak type
       let streakType: 'current' | 'broken' | 'new' = 'current';
       
       // Check if streak is broken (no activity today or yesterday for BUILD habits)
       if (habit.habitType === 'BUILD') {
-        const today = new Date();
+        const today = this.getDateInTimezone(new Date(), userTimezone);
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         
-        const lastEventStart = new Date(lastEventDate);
+        const lastEventStart = this.getDateInTimezone(lastEventDate, userTimezone);
         lastEventStart.setHours(0, 0, 0, 0);
         const todayStart = new Date(today);
         todayStart.setHours(0, 0, 0, 0);
@@ -196,18 +208,19 @@ export class StreakService {
   }
   
   // Private helper: Calculate current streak from events
-  private static calculateCurrentStreak(events: Array<{ eventType: string; occurredAt: Date }>, habitType: string): number {
+  private static calculateCurrentStreak(events: Array<{ eventType: string; occurredAt: Date }>, habitType: string, userTimezone: string): number {
     if (events.length === 0) return 0;
     
-    const today = new Date();
+    const today = this.getDateInTimezone(new Date(), userTimezone);
     today.setHours(0, 0, 0, 0);
     let currentDate = new Date(today);
     let streak = 0;
     
-    // Group events by date
+    // Group events by date in user's timezone
     const eventsByDate = new Map<string, string>();
     events.forEach(event => {
-      const dateKey = event.occurredAt.toISOString().split('T')[0];
+      const eventDateInUserTz = this.getDateInTimezone(event.occurredAt, userTimezone);
+      const dateKey = eventDateInUserTz.toISOString().split('T')[0];
       // For streak calculation, only track the most significant event per day
       if (!eventsByDate.has(dateKey) || 
           (habitType === 'BUILD' && event.eventType === 'COMPLETED') ||
@@ -253,13 +266,14 @@ export class StreakService {
   }
   
   // Private helper: Calculate longest streak in history
-  private static calculateLongestStreak(events: Array<{ eventType: string; occurredAt: Date }>, habitType: string): number {
+  private static calculateLongestStreak(events: Array<{ eventType: string; occurredAt: Date }>, habitType: string, userTimezone: string): number {
     if (events.length === 0) return 0;
     
-    // Group events by date (oldest first for longest streak calculation)
+    // Group events by date in user's timezone (oldest first for longest streak calculation)
     const eventsByDate = new Map<string, string>();
     events.reverse().forEach(event => {
-      const dateKey = event.occurredAt.toISOString().split('T')[0];
+      const eventDateInUserTz = this.getDateInTimezone(event.occurredAt, userTimezone);
+      const dateKey = eventDateInUserTz.toISOString().split('T')[0];
       if (!eventsByDate.has(dateKey) || 
           (habitType === 'BUILD' && event.eventType === 'COMPLETED') ||
           (habitType === 'AVOID' && event.eventType !== 'RELAPSED')) {
@@ -378,6 +392,37 @@ export class StreakService {
       }
       Logger.error('Failed to get streak history', { habitId, userId, error });
       throw new AppError('Failed to get streak history', 500);
+    }
+  }
+
+  // Helper method to convert a date to a specific timezone
+  private static getDateInTimezone(date: Date, timezone: string): Date {
+    try {
+      // Use Intl.DateTimeFormat to get the date in the specified timezone
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      const parts = formatter.formatToParts(date);
+      const partsMap = parts.reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+      }, {} as Record<string, string>);
+      
+      return new Date(
+        `${partsMap.year}-${partsMap.month}-${partsMap.day}T${partsMap.hour}:${partsMap.minute}:${partsMap.second}.000Z`
+      );
+    } catch (error) {
+      // Fallback to UTC if timezone is invalid
+      Logger.error('Invalid timezone, falling back to UTC', { timezone, error });
+      return new Date(date);
     }
   }
 }
