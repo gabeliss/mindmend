@@ -13,10 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { CoachingCopy } from '../lib/design-system';
 import { useAuth } from '../services/auth';
 import { useHabits, HabitWithStreak, TodaysProgress } from '../hooks';
-import { ProgressSection, HabitCard, AddHabitModal, DailySummaryCard } from '../components/home';
-import { SkeletonLoader } from '../components/common';
-import { DailySummaryData } from '../types/insights';
-import { apiClient } from '../services/api';
+import { ProgressSection, HabitCard, AddHabitModal } from '../components/home';
 
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -33,10 +30,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [animatedValues, setAnimatedValues] = useState<{ [key: string]: Animated.Value }>({});
-  
-  // Daily Summary state
-  const [dailySummary, setDailySummary] = useState<DailySummaryData | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [dailyInsight, setDailyInsight] = useState<string>('');
   
   // Add Habit Modal State
   const [showAddHabitModal, setShowAddHabitModal] = useState(false);
@@ -97,63 +91,26 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     navigation.navigate('Check-In');
   }, [navigation]);
 
-  // Load daily summary
-  const loadDailySummary = useCallback(async () => {
-    try {
-      setSummaryLoading(true);
-      const response = await apiClient.getDailySummary();
-      if (response.success && response.data) {
-        setDailySummary(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to load daily summary:', error);
-    } finally {
-      setSummaryLoading(false);
-    }
-  }, []);
-
-  // Handle insight feedback
-  const handleInsightFeedback = useCallback(async (feedback: "helpful" | "not_helpful") => {
-    try {
-      await apiClient.recordInsightFeedback('daily-insight', feedback);
-      console.log('Insight feedback recorded:', feedback);
-    } catch (error) {
-      console.error('Failed to record insight feedback:', error);
-    }
-  }, []);
-
-  // Handle refresh - load both habits and daily summary
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await Promise.all([
-      loadHabits(),
-      loadDailySummary()
-    ]);
-    setIsRefreshing(false);
-  }, [loadHabits, loadDailySummary]);
-
-  // Load habits and daily summary when authenticated
+  // Load habits when authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log('HomeScreen useEffect: Loading habits and daily summary on mount');
+      console.log('HomeScreen useEffect: Loading habits on mount');
       loadHabits();
-      loadDailySummary();
     }
-  }, [isAuthenticated, user, loadHabits, loadDailySummary]);
+  }, [isAuthenticated, user, loadHabits]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       if (isAuthenticated && user) {
-        console.log('HomeScreen focused, refreshing habits and daily summary data...');
+        console.log('HomeScreen focused, refreshing habits data...');
         const timeoutId = setTimeout(() => {
           loadHabits();
-          loadDailySummary();
         }, 200);
         
         return () => clearTimeout(timeoutId);
       }
-    }, [isAuthenticated, user, loadHabits, loadDailySummary])
+    }, [isAuthenticated, user, loadHabits])
   );
 
 
@@ -180,22 +137,20 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     <View style={styles.container}>
       <Text style={styles.header}>{CoachingCopy.headers.todaysPlan}</Text>
       
-      {/* Daily Summary */}
-      {summaryLoading ? (
-        <SkeletonLoader type="summary" />
-      ) : dailySummary ? (
-        <DailySummaryCard
-          summary={dailySummary}
-          onInsightFeedback={handleInsightFeedback}
-        />
-      ) : null}
-
       {/* Progress Summary */}
       <ProgressSection 
         todaysProgress={todaysProgress}
         user={user}
         onStartDayCheckIn={startMorningCheckIn}
       />
+
+      {/* Daily Insight */}
+      {dailyInsight ? (
+        <View style={styles.insightSection}>
+          <Text style={styles.insightLabel}>Today's AI Insight</Text>
+          <Text style={styles.insightText}>{dailyInsight}</Text>
+        </View>
+      ) : null}
 
       {/* Habits List */}
       <FlatList
@@ -204,7 +159,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={handleRefresh}
+            onRefresh={loadHabits}
             colors={['#4F8EF7']}
             tintColor="#4F8EF7"
           />
@@ -279,6 +234,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  insightSection: {
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: '#E6F3FF',
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4F8EF7',
+  },
+  insightLabel: {
+    fontSize: 12,
+    color: '#4F8EF7',
+    fontWeight: '600',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  insightText: {
+    fontSize: 14,
+    color: '#2D3748',
+    lineHeight: 20,
   },
   emptyState: {
     padding: 40,

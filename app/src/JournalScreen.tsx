@@ -14,7 +14,6 @@ import {
 import Slider from '@react-native-community/slider';
 import { useAuth } from './services/auth';
 import { apiClient, JournalEntry, AIInsight, isApiError, handleApiError } from './services/api';
-import { DailyTimeline } from './components/journal';
 
 interface MoodDay {
   date: string;
@@ -40,11 +39,9 @@ export default function JournalScreen() {
   const [journalContent, setJournalContent] = useState('');
   const [selectedMood, setSelectedMood] = useState<number>(5.0);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
-  const [timelineData, setTimelineData] = useState<any[]>([]);
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [moodCalendar, setMoodCalendar] = useState<MoodDay[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isTimelineLoading, setIsTimelineLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,32 +81,6 @@ export default function JournalScreen() {
       Alert.alert('Error', 'Failed to load journal entries. Please try again.');
     } finally {
       setIsLoading(false);
-    }
-  }, [isAuthenticated, user]);
-
-  // Load timeline data
-  const loadTimelineData = useCallback(async () => {
-    if (!isAuthenticated || !user) return;
-
-    try {
-      setIsTimelineLoading(true);
-
-      const response = await apiClient.getJournalTimeline({
-        days: 14,
-        limit: 20,
-      });
-
-      if (isApiError(response)) {
-        throw new Error(handleApiError(response));
-      }
-
-      setTimelineData(response.data || []);
-
-    } catch (error) {
-      console.error('Failed to load timeline data:', error);
-      Alert.alert('Error', 'Failed to load timeline data. Please try again.');
-    } finally {
-      setIsTimelineLoading(false);
     }
   }, [isAuthenticated, user]);
 
@@ -184,11 +155,8 @@ export default function JournalScreen() {
       setJournalContent('');
       setSelectedMood(5.0);
       
-      // Refresh entries and timeline
-      await Promise.all([
-        loadJournalEntries(),
-        loadTimelineData(),
-      ]);
+      // Refresh entries
+      await loadJournalEntries();
       
       // Switch to history tab to show the new entry
       setActiveTab('history');
@@ -208,20 +176,18 @@ export default function JournalScreen() {
     setIsRefreshing(true);
     await Promise.all([
       loadJournalEntries(),
-      loadTimelineData(),
       loadInsights(),
     ]);
     setIsRefreshing(false);
-  }, [loadJournalEntries, loadTimelineData, loadInsights]);
+  }, [loadJournalEntries, loadInsights]);
 
   // Load data when component mounts or user changes
   useEffect(() => {
     if (isAuthenticated && user) {
       loadJournalEntries();
-      loadTimelineData();
       loadInsights();
     }
-  }, [isAuthenticated, user, loadJournalEntries, loadTimelineData, loadInsights]);
+  }, [isAuthenticated, user, loadJournalEntries, loadInsights]);
 
   // Format date for display
   const formatDate = (dateString: string): string => {
@@ -330,116 +296,56 @@ export default function JournalScreen() {
     </ScrollView>
   );
 
-  // Handle navigation from timeline
-  const handleViewJournal = (date: string, entryId?: string) => {
-    if (entryId) {
-      // Navigate to specific journal entry
-      const entry = journalEntries.find(e => e.id === entryId);
-      if (entry) {
-        Alert.alert(
-          'Journal Entry',
-          `${formatDate(entry.createdAt)}\n\n${entry.content}`,
-          [
-            { text: 'Close', style: 'cancel' },
-            { text: 'Edit', onPress: () => {
-              // Switch to write tab and populate with entry content
-              setJournalContent(entry.content);
-              if (entry.moodRating) {
-                setSelectedMood(entry.moodRating);
-              }
-              setActiveTab('write');
-            }}
-          ]
-        );
-      }
-    } else {
-      // Show entries for that date
-      const dateEntries = journalEntries.filter(e => 
-        e.createdAt.startsWith(date)
-      );
-      
-      if (dateEntries.length > 0) {
-        Alert.alert(
-          `Journal Entries for ${date}`,
-          `Found ${dateEntries.length} ${dateEntries.length === 1 ? 'entry' : 'entries'} for this date.`,
-          [
-            { text: 'Close', style: 'cancel' },
-            { text: 'View All', onPress: () => setActiveTab('history') }
-          ]
-        );
-      } else {
-        Alert.alert(
-          'No Journal Entries',
-          `No journal entries found for ${date}. Would you like to create one?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Write Entry', onPress: () => {
-              setJournalContent(`Entry for ${date}: `);
-              setActiveTab('write');
-            }}
-          ]
-        );
-      }
-    }
-  };
-
-  const handleViewHabits = (date: string) => {
-    // Get habit data for that date from timeline
-    const dayData = timelineData.find(d => d.date === date);
-    if (dayData && dayData.habits.length > 0) {
-      const completedHabits = dayData.habits.filter(h => h.status === 'completed').length;
-      const totalHabits = dayData.habits.length;
-      
-      const habitsList = dayData.habits.map(h => 
-        `${getHabitStatusEmoji(h)} ${h.title}`
-      ).join('\n');
-      
-      Alert.alert(
-        `Habits for ${date}`,
-        `Progress: ${completedHabits}/${totalHabits} completed\n\n${habitsList}`,
-        [
-          { text: 'Close', style: 'cancel' },
-          { text: 'Go to Habits', onPress: () => {
-            // In a real app, this would navigate to the habits screen
-            Alert.alert('Navigation', 'Would navigate to Habits screen');
-          }}
-        ]
-      );
-    } else {
-      Alert.alert(
-        'No Habit Data',
-        `No habit data found for ${date}.`,
-        [{ text: 'OK' }]
-      );
-    }
-  };
-
-  // Helper function to get habit status emoji (duplicate from DailyTimelineEntry)
-  const getHabitStatusEmoji = (habit: any): string => {
-    switch (habit.status) {
-      case 'completed':
-        return habit.habitType === 'BUILD' ? '✅' : '🚫';
-      case 'skipped':
-        return '⏸️';
-      default:
-        return '⏳';
-    }
-  };
-
   // Render history tab
   const renderHistoryTab = () => (
-    <View style={styles.tabContentFull}>
-      <View style={styles.historyHeader}>
-        {renderMoodCalendar()}
-      </View>
+    <View style={styles.tabContent}>
+      {renderMoodCalendar()}
       
-      <DailyTimeline
-        timelineData={timelineData}
-        loading={isTimelineLoading}
-        onViewJournal={handleViewJournal}
-        onViewHabits={handleViewHabits}
-        emptyMessage="No journal entries yet. Start writing to track your thoughts and moods!"
-      />
+      <Text style={styles.sectionTitle}>Recent Entries</Text>
+      
+      {isLoading && journalEntries.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4F8EF7" />
+          <Text style={styles.loadingText}>Loading entries...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={journalEntries}
+          keyExtractor={item => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              colors={['#4F8EF7']}
+              tintColor="#4F8EF7"
+            />
+          }
+          ListEmptyComponent={() => (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                No journal entries yet. Start writing to track your thoughts and moods!
+              </Text>
+            </View>
+          )}
+          renderItem={({ item }) => (
+            <View style={styles.journalEntryCard}>
+              <View style={styles.entryHeader}>
+                <Text style={styles.entryDate}>{formatDate(item.createdAt)}</Text>
+                {item.moodRating && (
+                  <View style={[styles.moodBadge, { backgroundColor: getMoodColor(item.moodRating) }]}>
+                    <Text style={styles.moodBadgeText}>
+                      {moodEmojis[item.moodRating]} {item.moodRating}/10
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.entryContent} numberOfLines={4}>
+                {item.content}
+              </Text>
+            </View>
+          )}
+        />
+      )}
     </View>
   );
 
@@ -576,13 +482,6 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
     padding: 16,
-  },
-  tabContentFull: {
-    flex: 1,
-  },
-  historyHeader: {
-    padding: 16,
-    paddingBottom: 0,
   },
   sectionTitle: {
     fontSize: 18,

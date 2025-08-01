@@ -14,7 +14,6 @@ router.use(rateLimiter);
 // Journal entry CRUD operations
 router.post('/', journalController.createEntry);
 router.get('/', journalController.getEntries);
-router.get('/timeline', journalController.getTimelineData);
 router.get('/mood-trend', journalController.getMoodTrend);
 router.get('/date/:date', journalController.getEntriesByDate);
 router.get('/:id', journalController.getEntryById);

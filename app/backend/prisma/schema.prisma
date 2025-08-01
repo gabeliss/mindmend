@@ -95,22 +95,15 @@ model AIInsight {
 }
 
 model DailyStats {
-  id               String    @id @default(uuid()) @db.Uuid
-  userId           String    @map("user_id") @db.Uuid
-  date             DateTime  @db.Date
-  habitsCompleted  Int       @default(0) @map("habits_completed")
-  habitsTotal      Int       @default(0) @map("habits_total")
-  journalEntries   Int       @default(0) @map("journal_entries")
-  avgMood          Float?    @map("avg_mood")
-  morningCheckinAt DateTime? @map("morning_checkin_at")
-  eveningCheckinAt DateTime? @map("evening_checkin_at")
-  checkinSummary   String?   @map("checkin_summary")
-  moodRangeStart   Int?      @map("mood_range_start")
-  moodRangeEnd     Int?      @map("mood_range_end")
-  moodEntryCount   Int       @default(0) @map("mood_entry_count")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  date            DateTime @db.Date
+  habitsCompleted Int      @default(0) @map("habits_completed")
+  habitsTotal     Int      @default(0) @map("habits_total")
+  journalEntries  Int      @default(0) @map("journal_entries")
+  avgMood         Float?   @map("avg_mood")
+  createdAt       DateTime @default(now()) @map("created_at")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date], name: "user_date_unique")
   @@index([userId])

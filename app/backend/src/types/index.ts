@@ -129,49 +129,6 @@ export interface AIUsageStats {
   lastUpdated: Date;
 }
 
-// Daily Summary types
-export interface DailySummaryData {
-  date: string;
-  checkInStatus: {
-    morning: boolean;
-    evening: boolean;
-  };
-  mood: MoodDisplayData | null;
-  habits: {
-    completed: number;
-    total: number;
-  };
-  aiInsight: AIInsightData | null;
-  yesterdayComparison?: string;
-}
-
-export interface AIInsightData {
-  insight: string;
-  confidence: "low" | "medium" | "high";
-  reasoning: string;
-  dataPoints: number;
-}
-
-// Mood types
-export interface MoodDisplayData {
-  type: "single" | "range";
-  current?: number;
-  start?: number;
-  end?: number;
-  display: string;
-}
-
-export interface MoodAggregationResult {
-  date: string;
-  moodRangeStart: number;
-  moodRangeEnd: number;
-  moodEntryCount: number;
-  entries: Array<{
-    moodRating: number;
-    createdAt: string;
-  }>;
-}
-
 // Error types
 export class AppError extends Error {
   public statusCode: number;

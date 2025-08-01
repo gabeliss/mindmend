@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useAuth } from './services/auth';
 import { apiClient, isApiError, handleApiError } from './services/api';
-import { TodaysContextSection, QuickMoodEntry } from './components/checkin';
 
 interface Question {
   text: string;
@@ -68,10 +67,6 @@ export default function CheckInScreen() {
   const [showPrefills, setShowPrefills] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
-  
-  // Context data state
-  const [contextData, setContextData] = useState<any>(null);
-  const [contextLoading, setContextLoading] = useState(true);
   
   const questions = tab === 'morning' ? morningQuestions : eveningQuestions;
   
@@ -181,19 +176,6 @@ Selected Mindset: ${selectedMindset?.label || 'Not selected'}
     try {
       setIsSubmitting(true);
       
-      // Submit check-in data to backend
-      const checkInData = {
-        checkInType: tab,
-        responses,
-        mood: selectedMood,
-        mindset: selectedMindset,
-      };
-      
-      const submitResponse = await apiClient.submitCheckIn(checkInData);
-      if (!submitResponse.success) {
-        throw new Error('Failed to submit check-in');
-      }
-      
       const feedback = await generateAIFeedback(tab, responses, selectedMood?.value);
       setAiFeedback(feedback);
 
@@ -250,34 +232,12 @@ Selected Mindset: ${selectedMindset?.label || 'Not selected'}
     setAiFeedback('');
   };
 
-  // Load context data
-  const loadContextData = async () => {
-    try {
-      setContextLoading(true);
-      const response = await apiClient.getTodaysContext();
-      if (response.success && response.data) {
-        setContextData(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to load context data:', error);
-    } finally {
-      setContextLoading(false);
-    }
-  };
-
   // Auto-select appropriate tab based on time of day
   useEffect(() => {
     const hour = new Date().getHours();
     const autoTab = hour < 12 ? 'morning' : 'evening';
     setTab(autoTab);
   }, []);
-
-  // Load context data when authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadContextData();
-    }
-  }, [isAuthenticated, user]);
 
   if (!isAuthenticated) {
     return (
@@ -307,41 +267,6 @@ Selected Mindset: ${selectedMindset?.label || 'Not selected'}
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Today's Context Section */}
-      {contextData && !contextLoading && (
-        <TodaysContextSection
-          habits={contextData.habits || []}
-          mood={contextData.mood}
-          defaultOpen={false}
-          onUpdateHabits={() => {
-            Alert.alert('Navigation', 'Would navigate to Habits screen to update habits');
-          }}
-          onAddMoodEntry={() => {
-            Alert.alert('Navigation', 'Would navigate to Journal screen to add mood entry');
-          }}
-          onViewJournal={() => {
-            Alert.alert('Navigation', 'Would navigate to Journal screen with timeline view');
-          }}
-          onViewProgress={() => {
-            Alert.alert('Navigation', 'Would navigate to Streaks screen to view progress');
-          }}
-        />
-      )}
-
-      {/* Quick Mood Entry */}
-      <QuickMoodEntry
-        compact={true}
-        currentMood={selectedMood?.value}
-        onMoodUpdated={(mood) => {
-          const moodOption = moodEmojis.find(m => m.value === mood);
-          if (moodOption) {
-            setSelectedMood(moodOption);
-          }
-          // Refresh context data to show updated mood
-          loadContextData();
-        }}
-      />
 
       <View style={styles.prefillContainer}>
         <TouchableOpacity 

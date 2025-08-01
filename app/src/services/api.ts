@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DailySummaryData } from '../types/insights';
 
 // API Configuration - Choose the right URL for your testing environment
 const getApiBaseUrl = () => {
@@ -404,23 +403,6 @@ class ApiClient {
     });
   }
 
-  async getJournalTimeline(params?: {
-    days?: number;
-    limit?: number;
-  }): Promise<ApiResponse<any[]>> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) queryParams.append(key, value.toString());
-      });
-    }
-    
-    const queryString = queryParams.toString();
-    const endpoint = queryString ? `/journal/timeline?${queryString}` : '/journal/timeline';
-    
-    return this.makeRequest<any[]>(endpoint);
-  }
-
   // AI Insights methods
   async generateDailyInsights(): Promise<ApiResponse<AIInsight[]>> {
     return this.makeRequest<AIInsight[]>('/ai/insights/generate/daily', {
@@ -453,41 +435,6 @@ class ApiClient {
   async markInsightAsShown(insightId: string): Promise<ApiResponse<AIInsight>> {
     return this.makeRequest<AIInsight>(`/ai/insights/${insightId}/shown`, {
       method: 'PUT',
-    });
-  }
-
-  // Daily Summary method
-  async getDailySummary(): Promise<ApiResponse<DailySummaryData>> {
-    return this.makeRequest<DailySummaryData>('/insights/daily-summary');
-  }
-
-  // Today's Context method for check-in screen
-  async getTodaysContext(): Promise<ApiResponse<any>> {
-    return this.makeRequest<any>('/insights/todays-context');
-  }
-
-  // Get contextual check-in questions
-  async getContextualCheckInQuestions(checkInType: 'morning' | 'evening'): Promise<ApiResponse<any>> {
-    return this.makeRequest<any>(`/insights/contextual-questions?checkInType=${checkInType}`);
-  }
-
-  // Submit check-in data
-  async submitCheckIn(data: {
-    checkInType: 'morning' | 'evening';
-    responses: string[];
-    mood?: any;
-    mindset?: any;
-  }): Promise<ApiResponse<any>> {
-    return this.makeRequest<any>('/insights/submit-checkin', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async recordInsightFeedback(insightId: string, feedback: 'helpful' | 'not_helpful'): Promise<ApiResponse<any>> {
-    return this.makeRequest<any>('/insights/feedback', {
-      method: 'POST',
-      body: JSON.stringify({ insightId, feedback }),
     });
   }
 
