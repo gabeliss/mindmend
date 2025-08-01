@@ -30,6 +30,7 @@ import analyticsRoutes from './routes/analytics';
 import journalRoutes from './routes/journal';
 import aiInsightRoutes from './routes/aiInsights';
 import weeklySummaryRoutes from './routes/weeklySummary';
+import insightsRoutes from './routes/insights';
 
 class App {
   public app: Application;
@@ -132,6 +133,7 @@ class App {
     this.app.use('/api/journal', journalRoutes);
     this.app.use('/api/ai/insights', aiInsightRoutes);
     this.app.use('/api/weekly-summary', weeklySummaryRoutes);
+    this.app.use('/api/insights', insightsRoutes);
   }
 
   private initializeErrorHandling(): void {

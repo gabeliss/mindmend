@@ -218,6 +218,30 @@ export class JournalController {
       errorResponse(res, 'Failed to retrieve mood trend', 500);
     }
   }
+
+  async getTimelineData(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const days = req.query.days ? Number(req.query.days) : 14;
+      const limit = req.query.limit ? Number(req.query.limit) : 50;
+
+      if (isNaN(days) || days < 1 || days > 90) {
+        errorResponse(res, 'Days must be between 1 and 90', 400);
+        return;
+      }
+
+      if (isNaN(limit) || limit < 1 || limit > 100) {
+        errorResponse(res, 'Limit must be between 1 and 100', 400);
+        return;
+      }
+
+      const timelineData = await journalService.getTimelineData(userId, days, limit);
+      successResponse(res, timelineData, 'Timeline data retrieved successfully');
+    } catch (error) {
+      console.error('Error getting timeline data:', error);
+      errorResponse(res, 'Failed to retrieve timeline data', 500);
+    }
+  }
 }
 
 export const journalController = new JournalController();
