@@ -27,11 +27,13 @@ npm run install:all
 ### Development
 
 Start the mobile app:
+
 ```bash
 npm run dev:app
 ```
 
 Start the web application:
+
 ```bash
 npm run dev:web
 ```
@@ -39,6 +41,7 @@ npm run dev:web
 ### Building
 
 Build the web application:
+
 ```bash
 npm run build:web
 ```
