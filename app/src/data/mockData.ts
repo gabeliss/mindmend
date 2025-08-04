@@ -78,17 +78,17 @@ export const mockHabitEvents: HabitEvent[] = [
     created_at: "2025-08-02T09:40:00Z",
     updated_at: "2025-08-02T09:40:00Z"
   },
-  {
-    id: "event8",
-    habit_id: "habit_wake_up",
-    user_id: "user_1",
-    date: "2025-08-03",
-    value: 6.5, // 6:30 AM
-    status: "completed",
-    note: "Early bird catches the worm!",
-    created_at: "2025-08-03T07:00:00Z",
-    updated_at: "2025-08-03T07:00:00Z"
-  },
+  // {
+  //   id: "event8",
+  //   habit_id: "habit_wake_up",
+  //   user_id: "user_1",
+  //   date: "2025-08-03",
+  //   value: 6.5, // 6:30 AM
+  //   status: "completed",
+  //   note: "Early bird catches the worm!",
+  //   created_at: "2025-08-03T07:00:00Z",
+  //   updated_at: "2025-08-03T07:00:00Z"
+  // },
   {
     id: "event9",
     habit_id: "habit_wake_up",
@@ -157,18 +157,18 @@ export const mockHabitEvents: HabitEvent[] = [
     created_at: "2025-08-02T22:00:00Z",
     updated_at: "2025-08-02T22:00:00Z"
   },
-  {
-    id: "event13",
-    habit_id: "habit_screen_time",
-    user_id: "user_1",
-    date: "2025-08-03",
-    value: 1.5,
-    score: 1,
-    status: "completed",
-    note: "Great focus day!",
-    created_at: "2025-08-03T22:00:00Z",
-    updated_at: "2025-08-03T22:00:00Z"
-  },
+  // {
+  //   id: "event13",
+  //   habit_id: "habit_screen_time",
+  //   user_id: "user_1",
+  //   date: "2025-08-03",
+  //   value: 1.5,
+  //   score: 1,
+  //   status: "completed",
+  //   note: "Great focus day!",
+  //   created_at: "2025-08-03T22:00:00Z",
+  //   updated_at: "2025-08-03T22:00:00Z"
+  // },
   {
     id: "event14",
     habit_id: "habit_screen_time",

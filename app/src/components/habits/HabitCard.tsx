@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../lib/design-system';
 import { Habit, HabitEvent } from '../../types/habits';
 import DayCircle from './DayCircle';
@@ -23,7 +23,12 @@ export default function HabitCard({ habit, events, onDayPress }: HabitCardProps)
   };
 
   const getEventForDate = (date: Date): HabitEvent | undefined => {
-    const dateString = date.toISOString().split('T')[0];
+    // Use local timezone date string to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+    
     return events.find(event => event.date === dateString);
   };
 
@@ -61,13 +66,6 @@ export default function HabitCard({ habit, events, onDayPress }: HabitCardProps)
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.habitName}>{habit.name}</Text>
-          <View style={styles.typeIndicator}>
-            <Text style={styles.typeText}>
-              {habit.type === 'time_since' ? 'avoid' : 
-               habit.type === 'count_based' ? 'count' :
-               habit.type === 'time_based' ? 'time' : 'binary'}
-            </Text>
-          </View>
         </View>
         
         <HabitStats habit={habit} currentStreak={currentStreak} />
@@ -81,6 +79,7 @@ export default function HabitCard({ habit, events, onDayPress }: HabitCardProps)
               key={index}
               date={date}
               event={getEventForDate(date)}
+              habit={habit}
               onPress={(date) => onDayPress(date, habit)}
             />
           ))}
@@ -94,7 +93,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.neutral[50],
     borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
+    padding: Spacing.md,
     marginBottom: Spacing.md,
     ...Shadows.sm,
     borderWidth: 1,
@@ -114,19 +113,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: Spacing.sm,
   },
-  typeIndicator: {
-    backgroundColor: Colors.primary[100],
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-  },
-  typeText: {
-    ...Typography.caption,
-    color: Colors.primary[700],
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
   calendarSection: {
     marginTop: Spacing.sm,
   },
@@ -138,7 +124,6 @@ const styles = StyleSheet.create({
   },
   daysContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
 });
