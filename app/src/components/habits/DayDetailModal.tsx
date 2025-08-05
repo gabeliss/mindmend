@@ -8,6 +8,12 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import { Platform } from 'expo-modules-core';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+
+// Type assertion to fix TypeScript compatibility
+const DateTimePickerComponent = DateTimePicker as any;
 import { FontAwesome } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../lib/design-system';
 import { Habit, HabitEvent } from '../../types/habits';
@@ -35,25 +41,36 @@ export default function DayDetailModal({
   event,
   onClose,
   onSave,
-  position,
 }: DayDetailModalProps) {
   const [status, setStatus] = useState<HabitStatus>('not_logged');
   const [timeValue, setTimeValue] = useState('');
+  const [selectedTime, setSelectedTime] = useState(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [note, setNote] = useState('');
-  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     if (event) {
       setStatus(mapEventStatusToHabitStatus(event.status));
       setTimeValue(formatTimeValue(event.value));
       setNote(event.note || '');
+      
+      // Set selectedTime for DateTimePicker
+      if (event.value && habit.type === 'time_based' && habit.comparison_type === 'time_of_day') {
+        const hours = Math.floor(event.value);
+        const minutes = Math.round((event.value - hours) * 60);
+        const timeDate = new Date();
+        timeDate.setHours(hours, minutes, 0, 0);
+        setSelectedTime(timeDate);
+      }
     } else {
       setStatus('not_logged');
       setTimeValue('');
       setNote('');
+      
+      // Reset selectedTime to current time
+      setSelectedTime(new Date());
     }
-    setHasChanges(false);
-  }, [event, visible]);
+  }, [event, visible, habit]);
 
   const mapEventStatusToHabitStatus = (eventStatus: string): HabitStatus => {
     switch (eventStatus) {
@@ -263,7 +280,6 @@ export default function DayDetailModal({
 
   const handleTimeChange = (text: string) => {
     setTimeValue(text);
-    setHasChanges(true);
     
     const parsedValue = parseTimeValue(text);
     if (parsedValue !== undefined) {
@@ -272,9 +288,34 @@ export default function DayDetailModal({
     }
   };
 
+  const handleTimePickerChange = (_: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    
+    if (selectedDate) {
+      setSelectedTime(selectedDate);
+      
+      // Convert to hours (decimal format) for storage
+      const hours = selectedDate.getHours();
+      const minutes = selectedDate.getMinutes();
+      const timeInHours = hours + minutes / 60;
+      
+      // Update timeValue for display and parsing
+      setTimeValue(formatTime(timeInHours));
+      
+      // Suggest status based on time
+      const suggestedStatus = suggestStatusFromTime(timeInHours);
+      setStatus(suggestedStatus);
+    }
+  };
+
+  const showTimePickerModal = () => {
+    setShowTimePicker(true);
+  };
+
   const handleStatusChange = (newStatus: HabitStatus) => {
     setStatus(newStatus);
-    setHasChanges(true);
     
     if (newStatus === 'skipped' || newStatus === 'not_logged') {
       setTimeValue('');
@@ -282,9 +323,19 @@ export default function DayDetailModal({
   };
 
   const handleSave = () => {
-    const parsedValue = parseTimeValue(timeValue);
+    let parsedValue: number | undefined;
     
-    if (shouldShowTimeInput() && !parsedValue && status !== 'skipped') {
+    if (habit.type === 'time_based' && habit.comparison_type === 'time_of_day') {
+      // Use selectedTime for time_of_day goals
+      const hours = selectedTime.getHours();
+      const minutes = selectedTime.getMinutes();
+      parsedValue = hours + minutes / 60;
+    } else {
+      // Use parsed text input for other goal types
+      parsedValue = parseTimeValue(timeValue);
+    }
+    
+    if (shouldShowTimeInput() && parsedValue === undefined && status !== 'skipped') {
       Alert.alert('Missing Value', 'Please enter a time or value for this day.');
       return;
     }
@@ -312,18 +363,7 @@ export default function DayDetailModal({
   };
 
   const handleClose = () => {
-    if (hasChanges) {
-      Alert.alert(
-        'Unsaved Changes',
-        'You have unsaved changes. Are you sure you want to close?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Close', style: 'destructive', onPress: onClose },
-        ]
-      );
-    } else {
-      onClose();
-    }
+    onClose();
   };
 
   const statusOptions: HabitStatus[] = ['completed', 'failed', 'skipped', 'not_logged'];
@@ -435,13 +475,44 @@ export default function DayDetailModal({
                   ? `Duration (${getGoalDescription()})`
                   : `Count (${getGoalDescription()})`}
               </Text>
-              <TextInput
-                style={styles.timeInput}
-                value={timeValue}
-                onChangeText={handleTimeChange}
-                placeholder={getTimeInputPlaceholder()}
-                placeholderTextColor={Colors.neutral[400]}
-              />
+              
+              {habit.type === 'time_based' && habit.comparison_type === 'time_of_day' ? (
+                <View style={styles.timePickerContainer}>
+                  <TouchableOpacity 
+                    style={styles.timePickerButton}
+                    onPress={showTimePickerModal}
+                  >
+                    <Text style={styles.timePickerButtonText}>
+                      {formatTime(selectedTime.getHours() + selectedTime.getMinutes() / 60)}
+                    </Text>
+                    <FontAwesomeIcon 
+                      name="clock-o" 
+                      size={16} 
+                      color={Colors.primary[500]} 
+                      style={styles.timePickerIcon}
+                    />
+                  </TouchableOpacity>
+                  
+                  {showTimePicker && (
+                    <DateTimePickerComponent
+                      value={selectedTime}
+                      mode="time"
+                      is24Hour={false}
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={handleTimePickerChange}
+                      style={styles.timePicker}
+                    />
+                  )}
+                </View>
+              ) : (
+                <TextInput
+                  style={styles.timeInput}
+                  value={timeValue}
+                  onChangeText={handleTimeChange}
+                  placeholder={getTimeInputPlaceholder()}
+                  placeholderTextColor={Colors.neutral[400]}
+                />
+              )}
             </View>
           )}
 
@@ -450,9 +521,8 @@ export default function DayDetailModal({
             <TextInput
               style={styles.noteInput}
               value={note}
-              onChangeText={(text) => {
+              onChangeText={(text: string) => {
                 setNote(text);
-                setHasChanges(true);
               }}
               placeholder="Optional note..."
               placeholderTextColor={Colors.neutral[400]}
@@ -563,6 +633,35 @@ const styles = StyleSheet.create({
     maxWidth: 120,
     height: 40,
     textAlignVertical: 'center',
+  },
+  timePickerContainer: {
+    alignItems: 'flex-start',
+  },
+  timePickerButton: {
+    backgroundColor: Colors.neutral[100],
+    borderWidth: 1,
+    borderColor: Colors.neutral[300],
+    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 120,
+    height: 40,
+  },
+  timePickerButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.neutral[700],
+    textAlign: 'center',
+  },
+  timePickerIcon: {
+    marginLeft: Spacing.xs,
+  },
+  timePicker: {
+    width: '100%',
+    marginTop: Spacing.sm,
   },
   noteSection: {
     marginBottom: Spacing.lg,
