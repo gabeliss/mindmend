@@ -8,16 +8,62 @@ import { Habit, HabitEvent } from '../types/habits';
 import { mockHabits, mockHabitEvents } from '../data/mockData';
 import HabitCard from '../components/habits/HabitCard';
 import TodaysPlan from '../components/habits/TodaysPlan';
+import DayDetailModal from '../components/habits/DayDetailModal';
 import { getHabitEventsForHabit } from '../utils/habitUtils';
 
 export default function HabitsScreen() {
   const [habits] = useState<Habit[]>(mockHabits);
-  const [events] = useState<HabitEvent[]>(mockHabitEvents);
+  const [events, setEvents] = useState<HabitEvent[]>(mockHabitEvents);
   const [showTodaysPlan, setShowTodaysPlan] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
 
   const handleDayPress = (date: Date, habit: Habit) => {
-    console.log('Day pressed:', date, 'for habit:', habit.name);
-    // TODO: Open habit event modal/screen
+    setSelectedDate(date);
+    setSelectedHabit(habit);
+    setModalVisible(true);
+  };
+
+  const handleModalSave = (updatedEvent: Partial<HabitEvent>) => {
+    setEvents(prevEvents => {
+      const existingEventIndex = prevEvents.findIndex(
+        e => e.habit_id === updatedEvent.habit_id && e.date === updatedEvent.date
+      );
+
+      if (existingEventIndex >= 0) {
+        // Update existing event
+        const newEvents = [...prevEvents];
+        newEvents[existingEventIndex] = { ...newEvents[existingEventIndex], ...updatedEvent };
+        return newEvents;
+      } else {
+        // Create new event
+        const newEvent: HabitEvent = {
+          id: `event_${Date.now()}`,
+          habit_id: updatedEvent.habit_id!,
+          user_id: updatedEvent.user_id!,
+          date: updatedEvent.date!,
+          status: updatedEvent.status!,
+          value: updatedEvent.value,
+          note: updatedEvent.note,
+          created_at: updatedEvent.created_at!,
+          updated_at: updatedEvent.updated_at!,
+        };
+        return [...prevEvents, newEvent];
+      }
+    });
+  };
+
+  const getSelectedEvent = (): HabitEvent | undefined => {
+    if (!selectedHabit || !selectedDate) return undefined;
+    
+    // Use local timezone date string to avoid timezone issues
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+    
+    return events.find(e => e.habit_id === selectedHabit.id && e.date === dateString);
   };
 
   const handleAddHabit = () => {
@@ -69,6 +115,17 @@ export default function HabitsScreen() {
           ))}
         </View>
       </ScrollView>
+
+      {selectedHabit && (
+        <DayDetailModal
+          visible={modalVisible}
+          date={selectedDate}
+          habit={selectedHabit}
+          event={getSelectedEvent()}
+          onClose={() => setModalVisible(false)}
+          onSave={handleModalSave}
+        />
+      )}
     </SafeAreaView>
   );
 }

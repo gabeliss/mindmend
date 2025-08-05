@@ -24,7 +24,7 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
       case 'failed':
         return Colors.alert[500];
       case 'skipped':
-        return Colors.warning[500];
+        return Colors.neutral[400];
       default:
         return Colors.neutral[200];
     }
@@ -39,7 +39,7 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
       case 'failed':
         return Colors.alert[600];
       case 'skipped':
-        return Colors.warning[600];
+        return Colors.neutral[500];
       default:
         return Colors.neutral[300];
     }
@@ -59,7 +59,7 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
       case 'failed':
         return Colors.alert[100];
       case 'skipped':
-        return Colors.warning[100];
+        return Colors.neutral[200];
       default:
         return Colors.neutral[100];
     }
@@ -74,7 +74,7 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
       case 'failed':
         return Colors.alert[300];
       case 'skipped':
-        return Colors.warning[300];
+        return Colors.neutral[300];
       default:
         return Colors.neutral[200];
     }
@@ -89,7 +89,7 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
       case 'failed':
         return Colors.alert[700];
       case 'skipped':
-        return Colors.warning[700];
+        return Colors.neutral[600];
       default:
         return Colors.neutral[700];
     }

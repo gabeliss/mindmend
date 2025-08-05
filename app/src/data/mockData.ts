@@ -124,12 +124,12 @@ export const mockHabitEvents: HabitEvent[] = [
     id: "event12",
     habit_id: "habit_wake_up",
     user_id: "user_1",
-    date: "2025-07-28",
+    date: "2025-08-04",
     value: 8.0, // 8:00 AM
     status: "failed",
     note: "Weekend sleep-in",
-    created_at: "2025-07-28T09:00:00Z",
-    updated_at: "2025-07-28T09:00:00Z"
+    created_at: "2025-08-04T09:00:00Z",
+    updated_at: "2025-08-04T09:00:00Z"
   },
 
   // Screen time — success if < 2hr
