@@ -31,6 +31,7 @@ export interface HabitEvent {
   value?: number;
   score?: number;
   note?: string;
+  timestamp?: string; // Optional UTC timestamp for when the event actually occurred
   created_at: string;
   updated_at: string;
 }

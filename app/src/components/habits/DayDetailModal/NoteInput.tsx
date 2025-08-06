@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Keyboard } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius } from '../../../lib/design-system';
 
 interface NoteInputSectionProps {
@@ -18,8 +18,9 @@ export default function NoteInput({ note, onNoteChange }: NoteInputSectionProps)
         placeholder="Optional note..."
         placeholderTextColor={Colors.neutral[400]}
         multiline
-        numberOfLines={2}
+        numberOfLines={6}
         textAlignVertical="top"
+        returnKeyType="default"
       />
     </View>
   );

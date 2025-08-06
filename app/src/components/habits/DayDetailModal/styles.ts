@@ -20,12 +20,18 @@ export const dayDetailModalStyles = StyleSheet.create({
   popupContent: {
     padding: Spacing.lg,
   },
+  scrollContentContainerWithKeyboard: {
+    paddingBottom: Spacing.xl, // Extra bottom padding only when keyboard is visible
+  },
   popupHeader: {
     alignItems: 'center',
     marginBottom: Spacing.lg,
     paddingBottom: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[200],
+  },
+  popupHeaderWithKeyboard: {
+    marginTop: Spacing['2xl'], // Extra top margin when keyboard is active
   },
   habitName: {
     ...Typography.h2,

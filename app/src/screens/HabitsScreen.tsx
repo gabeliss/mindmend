@@ -28,7 +28,7 @@ export default function HabitsScreen() {
   const handleModalSave = (updatedEvent: Partial<HabitEvent>) => {
     setEvents(prevEvents => {
       const existingEventIndex = prevEvents.findIndex(
-        e => e.habit_id === updatedEvent.habit_id && e.date === updatedEvent.date
+        e => e.id === updatedEvent.id
       );
 
       if (existingEventIndex >= 0) {
@@ -39,19 +39,24 @@ export default function HabitsScreen() {
       } else {
         // Create new event
         const newEvent: HabitEvent = {
-          id: `event_${Date.now()}`,
+          id: updatedEvent.id || `event_${Date.now()}`,
           habit_id: updatedEvent.habit_id!,
           user_id: updatedEvent.user_id!,
           date: updatedEvent.date!,
           status: updatedEvent.status!,
           value: updatedEvent.value,
           note: updatedEvent.note,
+          timestamp: updatedEvent.timestamp,
           created_at: updatedEvent.created_at!,
           updated_at: updatedEvent.updated_at!,
         };
         return [...prevEvents, newEvent];
       }
     });
+  };
+
+  const handleDeleteEvent = (eventId: string) => {
+    setEvents(prevEvents => prevEvents.filter(e => e.id !== eventId));
   };
 
   const getSelectedEvent = (): HabitEvent | undefined => {
@@ -122,8 +127,10 @@ export default function HabitsScreen() {
           date={selectedDate}
           habit={selectedHabit}
           event={getSelectedEvent()}
+          allEvents={events}
           onClose={() => setModalVisible(false)}
           onSave={handleModalSave}
+          onDeleteEvent={handleDeleteEvent}
         />
       )}
     </SafeAreaView>

@@ -3,7 +3,12 @@ import { HabitStatus } from './habitStatusUtils';
 import { getGoalTimeForDate } from './habitTimeUtils';
 import { formatTime } from './habitUtils';
 
-export const shouldShowTimeInput = (status: HabitStatus): boolean => {
+export const shouldShowTimeInput = (status: HabitStatus, habit?: Habit): boolean => {
+  // Don't show time input for time_since habits (like avoidance habits)
+  if (habit?.type === 'time_since') {
+    return false;
+  }
+  
   return status !== 'skipped' && status !== 'not_logged';
 };
 
@@ -32,6 +37,11 @@ export const getGoalDescription = (habit: Habit, date: Date): string => {
     return `Goal: under ${formattedGoal}/day`;
   } else if (habit.type === 'count_based') {
     return `Goal: ${habit.goal_count || 10}`;
+  } else if (habit.type === 'time_since') {
+    if (habit.failure_tolerance) {
+      return `Goal: avoid completely (max ${habit.failure_tolerance.max_failures} failures/${habit.failure_tolerance.window})`;
+    }
+    return 'Goal: avoid completely';
   }
   return '';
 };

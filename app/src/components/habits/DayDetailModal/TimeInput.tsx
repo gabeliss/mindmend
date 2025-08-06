@@ -137,7 +137,7 @@ export default function TimeInput({
   onTimePickerChange,
   onShowTimePicker,
 }: TimeInputSectionProps) {
-  if (!shouldShowTimeInput(status)) {
+  if (!shouldShowTimeInput(status, habit)) {
     return null;
   }
 

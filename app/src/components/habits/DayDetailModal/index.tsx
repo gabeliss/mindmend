@@ -3,8 +3,12 @@ import {
   View,
   Text,
   Modal,
+  ScrollView,
+  KeyboardAvoidingView,
+  Keyboard,
   Alert,
 } from 'react-native';
+import { Platform } from 'expo-modules-core';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Habit, HabitEvent } from '../../../types/habits';
 import { 
@@ -24,6 +28,8 @@ import StatusButtons from './StatusButtons';
 import TimeInput from './TimeInput';
 import NoteInput from './NoteInput';
 import ActionButtons from './ActionButtons';
+import RelapseList from './RelapseList';
+import RelapseEditModal from './RelapseEditModal';
 import { dayDetailModalStyles } from './styles';
 
 interface DayDetailModalProps {
@@ -31,8 +37,10 @@ interface DayDetailModalProps {
   date: Date;
   habit: Habit;
   event?: HabitEvent;
+  allEvents?: HabitEvent[]; // All events to filter relapses from
   onClose: () => void;
   onSave: (updatedEvent: Partial<HabitEvent>) => void;
+  onDeleteEvent?: (eventId: string) => void;
 }
 
 export default function DayDetailModal({
@@ -40,14 +48,33 @@ export default function DayDetailModal({
   date,
   habit,
   event,
+  allEvents = [],
   onClose,
   onSave,
+  onDeleteEvent,
 }: DayDetailModalProps) {
   const [status, setStatus] = useState<HabitStatus>('not_logged');
   const [timeValue, setTimeValue] = useState('');
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [note, setNote] = useState('');
+  const [relapseEditModalVisible, setRelapseEditModalVisible] = useState(false);
+  const [editingRelapse, setEditingRelapse] = useState<HabitEvent | undefined>();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const scrollViewRef = React.useRef<ScrollView>(null);
+
+  // Get all relapses for this day (for time_since habits)
+  const getDayRelapses = (): HabitEvent[] => {
+    if (habit.type !== 'time_since') return [];
+    
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    
+    return allEvents.filter(evt => 
+      evt.habit_id === habit.id && 
+      evt.date === dateString && 
+      evt.status === 'failed'
+    ).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  };
 
   useEffect(() => {
     if (event) {
@@ -68,6 +95,26 @@ export default function DayDetailModal({
       setSelectedTime(new Date());
     }
   }, [event, visible, habit]);
+
+  // Keyboard event listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+      // Scroll to bottom when keyboard appears
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const handleTimeChange = (text: string) => {
     setTimeValue(text);
@@ -108,6 +155,13 @@ export default function DayDetailModal({
   };
 
   const handleSave = () => {
+    // For time_since habits, we don't save in the traditional way
+    // The relapses are saved individually through handleAddRelapse
+    if (habit.type === 'time_since') {
+      onClose();
+      return;
+    }
+
     let parsedValue: number | undefined;
     
     if (habit.type === 'time_based' && habit.comparison_type === 'time_of_day') {
@@ -153,6 +207,44 @@ export default function DayDetailModal({
     setNote(text);
   };
 
+  const handleAddRelapse = () => {
+    setEditingRelapse(undefined); // Clear any existing relapse being edited
+    setRelapseEditModalVisible(true);
+  };
+
+  const handleEditRelapse = (relapse: HabitEvent) => {
+    setEditingRelapse(relapse);
+    setRelapseEditModalVisible(true);
+  };
+
+  const handleSaveRelapse = (updatedRelapse: Partial<HabitEvent>) => {
+    if (!updatedRelapse.id) {
+      // Creating new relapse
+      const now = new Date();
+      const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      
+      const newRelapse: Partial<HabitEvent> = {
+        id: `relapse_${Date.now()}`,
+        habit_id: habit.id,
+        user_id: habit.user_id,
+        date: dateString,
+        status: 'failed',
+        created_at: now.toISOString(),
+        ...updatedRelapse,
+      };
+      onSave(newRelapse);
+    } else {
+      // Updating existing relapse
+      onSave(updatedRelapse);
+    }
+  };
+
+  const handleDeleteRelapse = (relapseId: string) => {
+    if (onDeleteEvent) {
+      onDeleteEvent(relapseId);
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -160,10 +252,23 @@ export default function DayDetailModal({
       transparent={true}
       onRequestClose={handleClose}
     >
-      <View style={dayDetailModalStyles.overlay}>
+      <KeyboardAvoidingView 
+        style={dayDetailModalStyles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 20}
+      >
         <View style={dayDetailModalStyles.container}>
-          <View style={dayDetailModalStyles.popupContent}>
-            <View style={dayDetailModalStyles.popupHeader}>
+          <ScrollView 
+            ref={scrollViewRef}
+            style={dayDetailModalStyles.popupContent}
+            contentContainerStyle={keyboardVisible ? dayDetailModalStyles.scrollContentContainerWithKeyboard : undefined}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={[
+              dayDetailModalStyles.popupHeader,
+              keyboardVisible && dayDetailModalStyles.popupHeaderWithKeyboard
+            ]}>
               <Text style={dayDetailModalStyles.habitName}>
                 {habit.name}
               </Text>
@@ -182,10 +287,12 @@ export default function DayDetailModal({
               </Text>
             </View>
 
-            <StatusButtons 
-              status={status}
-              onStatusChange={handleStatusChange}
-            />
+            {habit.type !== 'time_since' && (
+              <StatusButtons 
+                status={status}
+                onStatusChange={handleStatusChange}
+              />
+            )}
 
             <TimeInput
               habit={habit}
@@ -199,18 +306,37 @@ export default function DayDetailModal({
               onShowTimePicker={showTimePickerModal}
             />
 
-            <NoteInput
-              note={note}
-              onNoteChange={handleNoteChange}
-            />
+            {habit.type === 'time_since' && (
+              <RelapseList
+                relapses={getDayRelapses()}
+                onAddRelapse={handleAddRelapse}
+                onEditRelapse={handleEditRelapse}
+              />
+            )}
+
+            {habit.type !== 'time_since' && (
+              <NoteInput
+                note={note}
+                onNoteChange={handleNoteChange}
+              />
+            )}
 
             <ActionButtons
               onCancel={handleClose}
               onSave={handleSave}
             />
-          </View>
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
+
+      <RelapseEditModal
+        visible={relapseEditModalVisible}
+        relapse={editingRelapse}
+        date={date}
+        onClose={() => setRelapseEditModalVisible(false)}
+        onSave={handleSaveRelapse}
+        onDelete={handleDeleteRelapse}
+      />
     </Modal>
   );
 }
