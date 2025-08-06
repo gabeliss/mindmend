@@ -27,10 +27,29 @@ export const dayDetailModalStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[200],
   },
+  habitName: {
+    ...Typography.h2,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.neutral[900],
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
   popupTitle: {
     ...Typography.h3,
     fontSize: 16,
     fontWeight: '600',
     color: Colors.neutral[800],
+  },
+  goalSection: {
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  goalText: {
+    ...Typography.bodySmall,
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.neutral[600],
+    textAlign: 'center',
   },
 });

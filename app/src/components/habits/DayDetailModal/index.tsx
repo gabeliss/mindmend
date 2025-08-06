@@ -19,6 +19,7 @@ import {
   convertDateToTimeDecimal, 
   convertTimeDecimalToDate 
 } from '../../../utils/habitTimeUtils';
+import { getGoalDescription } from '../../../utils/habitValidationUtils';
 import StatusButtons from './StatusButtons';
 import TimeInput from './TimeInput';
 import NoteInput from './NoteInput';
@@ -163,12 +164,21 @@ export default function DayDetailModal({
         <View style={dayDetailModalStyles.container}>
           <View style={dayDetailModalStyles.popupContent}>
             <View style={dayDetailModalStyles.popupHeader}>
+              <Text style={dayDetailModalStyles.habitName}>
+                {habit.name}
+              </Text>
               <Text style={dayDetailModalStyles.popupTitle}>
                 {date.toLocaleDateString('en-US', { 
                   weekday: 'short', 
                   month: 'short', 
                   day: 'numeric' 
                 })}
+              </Text>
+            </View>
+
+            <View style={dayDetailModalStyles.goalSection}>
+              <Text style={dayDetailModalStyles.goalText}>
+                {getGoalDescription(habit, date)}
               </Text>
             </View>
 

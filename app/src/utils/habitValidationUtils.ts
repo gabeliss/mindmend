@@ -17,7 +17,19 @@ export const getGoalDescription = (habit: Habit, date: Date): string => {
     }
     return 'Goal: early wake up';
   } else if (habit.type === 'time_based' && habit.comparison_type === 'duration') {
-    return `Goal: under ${habit.goal_time || '2:00'}/day`;
+    const goalTime = habit.goal_time || '2:00';
+    const [hours, minutes] = goalTime.split(':').map(Number);
+    
+    let formattedGoal = '';
+    if (hours > 0 && minutes > 0) {
+      formattedGoal = `${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      formattedGoal = `${hours}h`;
+    } else if (minutes > 0) {
+      formattedGoal = `${minutes}m`;
+    }
+    
+    return `Goal: under ${formattedGoal}/day`;
   } else if (habit.type === 'count_based') {
     return `Goal: ${habit.goal_count || 10}`;
   }
@@ -37,11 +49,11 @@ export const getTimeInputPlaceholder = (habit: Habit): string => {
 
 export const getTimeInputLabel = (habit: Habit, goalDescription: string): string => {
   if (habit.type === 'time_based' && habit.comparison_type === 'time_of_day') {
-    return `Time (${goalDescription})`;
+    return 'Time';
   } else if (habit.type === 'time_based' && habit.comparison_type === 'duration') {
-    return `Duration (${goalDescription})`;
+    return 'Duration';
   } else if (habit.type === 'count_based') {
-    return `Count (${goalDescription})`;
+    return 'Count';
   }
   return '';
 };
