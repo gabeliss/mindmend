@@ -1,9 +1,21 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "../tsconfig.base",
   "compilerOptions": {
-    "strict": false,
-    "jsx": "react",
+    "baseUrl": ".",
+    "noImplicitAny": false,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "noImplicitAny": false
-  }
+    "noEmit": true,
+    "strict": false,
+    "types": ["react", "react-native", "node"]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

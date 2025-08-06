@@ -1,0 +1,24 @@
+// tsconfig.base.json
+{
+    "compilerOptions": {
+      "target": "esnext",
+      "module": "esnext",
+      "lib": ["esnext"],
+      "allowJs": true,
+      "jsx": "react-jsx",
+      "moduleResolution": "node",
+      "skipLibCheck": true,
+      "noEmit": true,
+      "isolatedModules": true,
+      "resolveJsonModule": true,
+      "strict": false,
+      "allowSyntheticDefaultImports": true,
+      "esModuleInterop": true,
+      "forceConsistentCasingInFileNames": true,
+      "noImplicitAny": false,
+      "noImplicitReturns": false,
+      "noImplicitThis": false,
+      "types": ["react", "react-native", "node"]
+    }
+  }
+  
