@@ -58,4 +58,20 @@ export const dayDetailModalStyles = StyleSheet.create({
     color: Colors.neutral[600],
     textAlign: 'center',
   },
+  encouragingMessageContainer: {
+    backgroundColor: Colors.success[100],
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.success[300],
+  },
+  encouragingMessage: {
+    ...Typography.body,
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.success[800],
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });

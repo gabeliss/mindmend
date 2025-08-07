@@ -155,9 +155,89 @@ export default function DayDetailModal({
   };
 
   const handleSave = () => {
-    // For time_since habits, we don't save in the traditional way
-    // The relapses are saved individually through handleAddRelapse
+    // For time_since habits with avoided status and existing relapses, show confirmation
+    if (habit.type === 'time_since' && status === 'completed') {
+      const dayRelapses = getDayRelapses();
+      if (dayRelapses.length > 0) {
+        Alert.alert(
+          'Remove Relapses?',
+          `Marking this day as 'Avoided' will remove the ${dayRelapses.length} existing relapse${dayRelapses.length === 1 ? '' : 's'}. Are you sure?`,
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Confirm',
+              style: 'destructive',
+              onPress: () => {
+                // Delete all relapses for this day
+                dayRelapses.forEach(relapse => {
+                  if (onDeleteEvent) {
+                    onDeleteEvent(relapse.id);
+                  }
+                });
+                
+                // Create avoided event
+                const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                const avoidedEvent: Partial<HabitEvent> = {
+                  id: `avoided_${Date.now()}`,
+                  habit_id: habit.id,
+                  user_id: habit.user_id,
+                  date: dateString,
+                  status: 'completed',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                };
+                onSave(avoidedEvent);
+                onClose();
+              },
+            },
+          ]
+        );
+        return;
+      } else {
+        // No relapses, just save the avoided status
+        const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const avoidedEvent: Partial<HabitEvent> = {
+          id: event?.id || `avoided_${Date.now()}`,
+          habit_id: habit.id,
+          user_id: habit.user_id,
+          date: dateString,
+          status: 'completed',
+          created_at: event?.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        onSave(avoidedEvent);
+        onClose();
+        return;
+      }
+    }
+    
+    // For time_since habits with other statuses (skipped, not_logged), save the status
     if (habit.type === 'time_since') {
+      if (status === 'skipped' || status === 'not_logged') {
+        const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        
+        if (status === 'not_logged') {
+          // For not_logged, delete the existing event if it exists (but keep relapses)
+          if (event?.id && onDeleteEvent) {
+            onDeleteEvent(event.id);
+          }
+        } else {
+          // For skipped, create or update the event
+          const statusEvent: Partial<HabitEvent> = {
+            id: event?.id || `skipped_${Date.now()}`,
+            habit_id: habit.id,
+            user_id: habit.user_id,
+            date: dateString,
+            status: 'skipped',
+            created_at: event?.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          onSave(statusEvent);
+        }
+      }
       onClose();
       return;
     }
@@ -287,12 +367,11 @@ export default function DayDetailModal({
               </Text>
             </View>
 
-            {habit.type !== 'time_since' && (
-              <StatusButtons 
-                status={status}
-                onStatusChange={handleStatusChange}
-              />
-            )}
+            <StatusButtons 
+              status={status}
+              habit={habit}
+              onStatusChange={handleStatusChange}
+            />
 
             <TimeInput
               habit={habit}
@@ -306,7 +385,15 @@ export default function DayDetailModal({
               onShowTimePicker={showTimePickerModal}
             />
 
-            {habit.type === 'time_since' && (
+            {habit.type === 'time_since' && status === 'completed' && (
+              <View style={dayDetailModalStyles.encouragingMessageContainer}>
+                <Text style={dayDetailModalStyles.encouragingMessage}>
+                  🎉 Great job staying on track today! Keep up the excellent work.
+                </Text>
+              </View>
+            )}
+
+            {habit.type === 'time_since' && status !== 'completed' && (
               <RelapseList
                 relapses={getDayRelapses()}
                 onAddRelapse={handleAddRelapse}

@@ -8,16 +8,18 @@ import {
   getStatusBorderColor, 
   getStatusLabel 
 } from '../../../utils/habitStatusUtils';
+import { Habit } from '../../../types/habits';
 
 // Type assertion to fix TypeScript compatibility
 const FontAwesomeIcon = FontAwesome as any;
 
 interface StatusButtonGridProps {
   status: HabitStatus;
+  habit: Habit;
   onStatusChange: (status: HabitStatus) => void;
 }
 
-export default function StatusButtons({ status, onStatusChange }: StatusButtonGridProps) {
+export default function StatusButtons({ status, habit, onStatusChange }: StatusButtonGridProps) {
   const statusOptions: HabitStatus[] = ['completed', 'failed', 'skipped', 'not_logged'];
 
   return (
@@ -54,7 +56,7 @@ export default function StatusButtons({ status, onStatusChange }: StatusButtonGr
                     : Colors.neutral[700]
                 }
               ]}>
-                {getStatusLabel(statusOption)}
+                {getStatusLabel(statusOption, habit.type)}
               </Text>
             </View>
           </TouchableOpacity>
@@ -91,7 +93,7 @@ export default function StatusButtons({ status, onStatusChange }: StatusButtonGr
                     : Colors.neutral[700]
                 }
               ]}>
-                {getStatusLabel(statusOption)}
+                {getStatusLabel(statusOption, habit.type)}
               </Text>
             </View>
           </TouchableOpacity>

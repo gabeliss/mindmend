@@ -172,11 +172,11 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
             )}
           </View>
         </View>
-      ) : (
+      ) : habit.type !== 'time_since' ? (
         <View style={styles.placeholderContainer}>
           <Text style={styles.placeholderText}>—</Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
 }

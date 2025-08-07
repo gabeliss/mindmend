@@ -225,7 +225,18 @@ export const mockHabitEvents: HabitEvent[] = [
     updated_at: "2025-08-01T22:00:00Z"
   },
 
-  // Avoid porn — tracked by failures (only log when failure happens)
+  // Avoid porn
+  {
+    id: "event24",
+    habit_id: "habit_no_porn",
+    user_id: "user_1",
+    date: "2025-08-01",
+    status: "completed",
+    note: "No porn, no problem",
+    timestamp: "2025-08-07T23:00:00Z", // Actual time it occurred
+    created_at: "2025-08-07T23:00:00Z",
+    updated_at: "2025-08-07T23:00:00Z"
+  },
   {
     id: "event5",
     habit_id: "habit_no_porn",

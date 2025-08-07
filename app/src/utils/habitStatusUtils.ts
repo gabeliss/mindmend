@@ -81,10 +81,10 @@ export const getStatusBorderColor = (statusType: HabitStatus, isSelected: boolea
   }
 };
 
-export const getStatusLabel = (statusType: HabitStatus): string => {
+export const getStatusLabel = (statusType: HabitStatus, habitType?: string): string => {
   switch (statusType) {
     case 'completed':
-      return 'Completed';
+      return habitType === 'time_since' ? 'Avoided' : 'Completed';
     case 'failed':
       return 'Failed';
     case 'skipped':
