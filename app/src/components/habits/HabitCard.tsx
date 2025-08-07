@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../lib/design-system';
 import { Habit, HabitEvent } from '../../types/habits';
 import DayCircle from './DayCircle';
@@ -9,9 +9,10 @@ interface HabitCardProps {
   habit: Habit;
   events: HabitEvent[];
   onDayPress: (date: Date, habit: Habit) => void;
+  onHabitPress?: (habit: Habit) => void;
 }
 
-export default function HabitCard({ habit, events, onDayPress }: HabitCardProps) {
+export default function HabitCard({ habit, events, onDayPress, onHabitPress }: HabitCardProps) {
   const getLast7Days = (): Date[] => {
     const days: Date[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -68,7 +69,11 @@ export default function HabitCard({ habit, events, onDayPress }: HabitCardProps)
   });
 
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={() => onHabitPress?.(habit)}
+      activeOpacity={0.7}
+    >
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.habitName}>{habit.name}</Text>
@@ -104,7 +109,7 @@ export default function HabitCard({ habit, events, onDayPress }: HabitCardProps)
           ))}
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

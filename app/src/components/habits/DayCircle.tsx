@@ -8,6 +8,9 @@ interface DayCircleProps {
   event?: HabitEvent;
   habit: Habit;
   onPress: (date: Date) => void;
+  size?: 'default' | 'small';
+  isToday?: boolean;
+  hideWeekday?: boolean;
 }
 
 const getAbbreviatedUnit = (unit: string): string => {
@@ -30,7 +33,7 @@ const getAbbreviatedUnit = (unit: string): string => {
   return abbreviations[unit.toLowerCase()] || (unit.length > 4 ? unit.slice(0, 3) : unit);
 };
 
-export default function DayCircle({ date, event, habit, onPress }: DayCircleProps) {
+export default function DayCircle({ date, event, habit, onPress, size = 'default', isToday = false, hideWeekday = false }: DayCircleProps) {
   const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
   const dayOfMonth = date.getDate();
   
@@ -50,6 +53,9 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
   };
 
   const getCircleBorderColor = (): string => {
+    // Today gets a distinct blue border regardless of status
+    if (isToday) return Colors.primary[600];
+    
     if (!event) return Colors.neutral[300];
     
     switch (event.status) {
@@ -62,6 +68,12 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
       default:
         return Colors.neutral[300];
     }
+  };
+
+  const getBorderWidth = (): number => {
+    // Today gets a much thicker border
+    if (isToday) return size === 'small' ? 3 : 4;
+    return size === 'small' ? 1.2 : 1.5;
   };
 
   const getTextColor = (): string => {
@@ -165,29 +177,49 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
   };
 
   const valueText = getValueText();
+  const isSmall = size === 'small';
 
   return (
     <View style={styles.dayContainer}>
+      {isToday && (
+        <View style={[
+          styles.todayIndicator,
+          isSmall && styles.todayIndicatorSmall
+        ]} />
+      )}
       <TouchableOpacity 
         style={[
-          styles.container, 
+          styles.container,
+          isSmall && styles.containerSmall,
           { 
             backgroundColor: getStatusColor(),
-            borderColor: getCircleBorderColor()
+            borderColor: getCircleBorderColor(),
+            borderWidth: getBorderWidth()
           }
         ]}
         onPress={() => onPress(date)}
         activeOpacity={0.7}
       >
-        <Text style={[styles.dayOfWeek, { color: getTextColor() }]}>
-          {dayOfWeek}
-        </Text>
-        <Text style={[styles.dayOfMonth, { color: getTextColor() }]}>
+        {!hideWeekday && (
+          <Text style={[
+            styles.dayOfWeek, 
+            isSmall && styles.dayOfWeekSmall,
+            { color: getTextColor() }
+          ]}>
+            {dayOfWeek}
+          </Text>
+        )}
+        <Text style={[
+          styles.dayOfMonth, 
+          isSmall && styles.dayOfMonthSmall,
+          hideWeekday && styles.dayOfMonthCentered,
+          { color: getTextColor() }
+        ]}>
           {dayOfMonth}
         </Text>
       </TouchableOpacity>
       
-      {valueText ? (
+      {!isSmall && valueText ? (
         <View style={[
           styles.valueContainer,
           { 
@@ -212,7 +244,7 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
             )}
           </View>
         </View>
-      ) : habit.type !== 'avoidance' && habit.type !== 'simple' ? (
+      ) : !isSmall && habit.type !== 'avoidance' && habit.type !== 'simple' ? (
         <View style={styles.placeholderContainer}>
           <Text style={styles.placeholderText}>—</Text>
         </View>
@@ -234,17 +266,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1.5,
   },
+  containerSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.2,
+  },
+  todayIndicator: {
+    position: 'absolute',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Colors.primary[100],
+    borderWidth: 2,
+    borderColor: Colors.primary[600],
+    top: -4,
+    left: '50%',
+    marginLeft: -26,
+    zIndex: -1,
+  },
+  todayIndicatorSmall: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    top: -4,
+    marginLeft: -22,
+  },
   dayOfWeek: {
     ...Typography.caption,
     fontSize: 10,
     fontWeight: '500',
     textTransform: 'uppercase',
   },
+  dayOfWeekSmall: {
+    fontSize: 8,
+  },
   dayOfMonth: {
     ...Typography.caption,
     fontSize: 14,
     fontWeight: '600',
     marginTop: -1,
+  },
+  dayOfMonthSmall: {
+    fontSize: 12,
+  },
+  dayOfMonthCentered: {
+    fontSize: 16,
+    marginTop: 0,
   },
   valueContainer: {
     borderRadius: BorderRadius.sm,

@@ -9,15 +9,18 @@ import { mockHabits, mockHabitEvents } from '../data/mockData';
 import HabitCard from '../components/habits/HabitCard';
 import TodaysPlan from '../components/habits/TodaysPlan';
 import DayDetailModal from '../components/habits/DayDetailModal';
+import HabitDetailScreen from './HabitDetailScreen';
 import { getHabitEventsForHabit } from '../utils/habitUtils';
 
 export default function HabitsScreen() {
-  const [habits] = useState<Habit[]>(mockHabits);
+  const [habits, setHabits] = useState<Habit[]>(mockHabits);
   const [events, setEvents] = useState<HabitEvent[]>(mockHabitEvents);
   const [showTodaysPlan, setShowTodaysPlan] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
+  const [habitDetailVisible, setHabitDetailVisible] = useState(false);
+  const [detailHabit, setDetailHabit] = useState<Habit | null>(null);
 
   const handleDayPress = (date: Date, habit: Habit) => {
     setSelectedDate(date);
@@ -76,6 +79,38 @@ export default function HabitsScreen() {
     // TODO: Open add habit modal/screen
   };
 
+  const handleHabitPress = (habit: Habit) => {
+    setDetailHabit(habit);
+    setHabitDetailVisible(true);
+  };
+
+  const handleSaveHabit = (updatedHabit: Partial<Habit>) => {
+    setHabits(prevHabits => 
+      prevHabits.map(h => 
+        h.id === updatedHabit.id ? { ...h, ...updatedHabit } : h
+      )
+    );
+  };
+
+  const handleArchiveHabit = (habitId: string) => {
+    setHabits(prevHabits => 
+      prevHabits.map(h => 
+        h.id === habitId ? { ...h, archived: true } : h
+      )
+    );
+  };
+
+  const handleDeleteHabit = (habitId: string) => {
+    setHabits(prevHabits => prevHabits.filter(h => h.id !== habitId));
+    // Also remove all events for this habit
+    setEvents(prevEvents => prevEvents.filter(e => e.habit_id !== habitId));
+  };
+
+  const handleResetHabit = (habitId: string) => {
+    // Remove all events for this habit to reset progress
+    setEvents(prevEvents => prevEvents.filter(e => e.habit_id !== habitId));
+  };
+
   return (
     <SafeAreaView style={styles.container as any}>
       <View style={styles.header}>
@@ -116,6 +151,7 @@ export default function HabitsScreen() {
               habit={habit}
               events={getHabitEventsForHabit(habit.id, events)}
               onDayPress={handleDayPress}
+              onHabitPress={handleHabitPress}
             />
           ))}
         </View>
@@ -131,6 +167,21 @@ export default function HabitsScreen() {
           onClose={() => setModalVisible(false)}
           onSave={handleModalSave}
           onDeleteEvent={handleDeleteEvent}
+        />
+      )}
+
+      {detailHabit && (
+        <HabitDetailScreen
+          visible={habitDetailVisible}
+          habit={detailHabit}
+          events={getHabitEventsForHabit(detailHabit.id, events)}
+          onClose={() => setHabitDetailVisible(false)}
+          onSave={handleSaveHabit}
+          onSaveEvent={handleModalSave}
+          onDeleteEvent={handleDeleteEvent}
+          onArchive={handleArchiveHabit}
+          onDelete={handleDeleteHabit}
+          onReset={handleResetHabit}
         />
       )}
     </SafeAreaView>
