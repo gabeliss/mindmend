@@ -11,6 +11,7 @@ interface DayCircleProps {
   size?: 'default' | 'small';
   isToday?: boolean;
   hideWeekday?: boolean;
+  disabled?: boolean;
 }
 
 const getAbbreviatedUnit = (unit: string): string => {
@@ -33,11 +34,12 @@ const getAbbreviatedUnit = (unit: string): string => {
   return abbreviations[unit.toLowerCase()] || (unit.length > 4 ? unit.slice(0, 3) : unit);
 };
 
-export default function DayCircle({ date, event, habit, onPress, size = 'default', isToday = false, hideWeekday = false }: DayCircleProps) {
+export default function DayCircle({ date, event, habit, onPress, size = 'default', isToday = false, hideWeekday = false, disabled = false }: DayCircleProps) {
   const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
   const dayOfMonth = date.getDate();
   
   const getStatusColor = (): string => {
+    if (disabled) return Colors.neutral[100];
     if (!event) return Colors.neutral[200];
     
     switch (event.status) {
@@ -54,8 +56,9 @@ export default function DayCircle({ date, event, habit, onPress, size = 'default
 
   const getCircleBorderColor = (): string => {
     // Today gets a distinct blue border regardless of status
-    if (isToday) return Colors.primary[600];
+    if (isToday && !disabled) return Colors.primary[600];
     
+    if (disabled) return Colors.neutral[200];
     if (!event) return Colors.neutral[300];
     
     switch (event.status) {
@@ -77,6 +80,7 @@ export default function DayCircle({ date, event, habit, onPress, size = 'default
   };
 
   const getTextColor = (): string => {
+    if (disabled) return Colors.neutral[400];
     if (!event || event.status === 'not_marked') return Colors.neutral[600];
     return Colors.neutral[50];
   };
@@ -191,14 +195,16 @@ export default function DayCircle({ date, event, habit, onPress, size = 'default
         style={[
           styles.container,
           isSmall && styles.containerSmall,
+          disabled && styles.containerDisabled,
           { 
             backgroundColor: getStatusColor(),
             borderColor: getCircleBorderColor(),
             borderWidth: getBorderWidth()
           }
         ]}
-        onPress={() => onPress(date)}
-        activeOpacity={0.7}
+        onPress={disabled ? undefined : () => onPress(date)}
+        activeOpacity={disabled ? 1 : 0.7}
+        disabled={disabled}
       >
         {!hideWeekday && (
           <Text style={[
@@ -219,7 +225,7 @@ export default function DayCircle({ date, event, habit, onPress, size = 'default
         </Text>
       </TouchableOpacity>
       
-      {!isSmall && valueText ? (
+      {!disabled && valueText ? (
         <View style={[
           styles.valueContainer,
           { 
@@ -244,7 +250,7 @@ export default function DayCircle({ date, event, habit, onPress, size = 'default
             )}
           </View>
         </View>
-      ) : !isSmall && habit.type !== 'avoidance' && habit.type !== 'simple' ? (
+      ) : habit.type !== 'avoidance' && habit.type !== 'simple' ? (
         <View style={styles.placeholderContainer}>
           <Text style={styles.placeholderText}>—</Text>
         </View>
@@ -291,6 +297,9 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     top: -4,
     marginLeft: -22,
+  },
+  containerDisabled: {
+    opacity: 0.5,
   },
   dayOfWeek: {
     ...Typography.caption,

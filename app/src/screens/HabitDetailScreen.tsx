@@ -372,6 +372,7 @@ export default function HabitDetailScreen({
           {monthData.days.map((date) => {
             const today = new Date();
             const isToday = date.toDateString() === today.toDateString();
+            const isFuture = date > today;
             
             return (
               <View key={date.toISOString()} style={styles.dayCell}>
@@ -383,6 +384,7 @@ export default function HabitDetailScreen({
                   size="small"
                   isToday={isToday}
                   hideWeekday={true}
+                  disabled={isFuture}
                 />
               </View>
             );
