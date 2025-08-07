@@ -25,22 +25,28 @@ interface HabitStatsProps {
 export default function HabitStats({ habit, currentStreak }: HabitStatsProps) {
   const getGoalText = (): string => {
     switch (habit.type) {
-      case 'time_based':
-        if (habit.comparison_type === 'time_of_day') {
-          // Check if there are different weekend goals
-          if (habit.goal_times_by_day && (habit.goal_times_by_day.Sat || habit.goal_times_by_day.Sun)) {
-            const weekdayGoal = formatTimeToAMPM(habit.goal_time);
-            const weekendGoal = formatTimeToAMPM(habit.goal_times_by_day.Sat || habit.goal_times_by_day.Sun);
-            return `Goal: by ${weekdayGoal} on weekdays, ${weekendGoal} on weekends`;
-          }
-          return `Goal: by ${formatTimeToAMPM(habit.goal_time)}`;
-        } else {
-          // Duration goal: format as "under 2 hrs/day" or "under 2.5 hrs/day"
-          const goalHours = parseFloat(habit.goal_time?.replace(':', '.') || '0');
-          const wholeHours = Math.floor(goalHours);
-          const minutes = Math.round((goalHours - wholeHours) * 60);
+      case 'simple':
+        return 'Goal: complete daily';
+      case 'schedule':
+        // Check if there are different weekend goals
+        if (habit.goal_times_by_day && (habit.goal_times_by_day.Sat || habit.goal_times_by_day.Sun)) {
+          const weekdayGoal = formatTimeToAMPM(habit.goal_time);
+          const weekendGoal = formatTimeToAMPM(habit.goal_times_by_day.Sat || habit.goal_times_by_day.Sun);
+          const direction = habit.goal_direction === 'by' ? 'by' : 'after';
+          return `Goal: ${direction} ${weekdayGoal} on weekdays, ${weekendGoal} on weekends`;
+        }
+        const direction = habit.goal_direction === 'by' ? 'by' : 'after';
+        return `Goal: ${direction} ${formatTimeToAMPM(habit.goal_time)}`;
+      case 'duration':
+        const goalValue = habit.goal_value || 2;
+        const unit = habit.unit || 'hours';
+        const directionText = habit.goal_direction === 'at_least' ? 'at least' : 'under';
+        
+        let goalText: string;
+        if (unit === 'hours') {
+          const wholeHours = Math.floor(goalValue);
+          const minutes = Math.round((goalValue - wholeHours) * 60);
           
-          let goalText;
           if (minutes === 0) {
             goalText = `${wholeHours} hr${wholeHours !== 1 ? 's' : ''}`;
           } else if (minutes === 30) {
@@ -48,12 +54,22 @@ export default function HabitStats({ habit, currentStreak }: HabitStatsProps) {
           } else {
             goalText = `${wholeHours}h ${minutes}m`;
           }
-          
-          return `Goal: under ${goalText}/day`;
+        } else if (unit === 'minutes') {
+          goalText = `${goalValue} min`;
+        } else {
+          goalText = `${goalValue} ${unit}`;
         }
-      case 'count_based':
-        return `Goal: ${habit.goal_count} pages`;
-      case 'time_since':
+        
+        return `Goal: ${directionText} ${goalText}/day`;
+      case 'quantity':
+        const quantityGoal = habit.goal_value || 10;
+        const quantityUnit = habit.unit || '';
+        const quantityDirection = habit.goal_direction === 'at_least' ? 'at least' : 'exactly';
+        return `Goal: ${quantityDirection} ${quantityGoal}${quantityUnit ? ' ' + quantityUnit : ''}`;
+      case 'avoidance':
+        if (habit.failure_tolerance) {
+          return `Goal: avoid completely (max ${habit.failure_tolerance.max_failures} failures/${habit.failure_tolerance.window})`;
+        }
         return 'Goal: avoid completely';
       default:
         return habit.frequency.type === 'daily' ? 'Daily goal' : 

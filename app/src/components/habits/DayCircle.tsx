@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius } from '../../lib/design-system';
 import { Habit, HabitEvent } from '../../types/habits';
-import { formatTime } from '../../utils/habitUtils';
 
 interface DayCircleProps {
   date: Date;
@@ -10,6 +9,26 @@ interface DayCircleProps {
   habit: Habit;
   onPress: (date: Date) => void;
 }
+
+const getAbbreviatedUnit = (unit: string): string => {
+  const abbreviations: { [key: string]: string } = {
+    'pages': 'pgs',
+    'minutes': 'min',
+    'hours': 'hrs',
+    'steps': 'st',
+    'glasses': 'gl',
+    'cups': 'cp',
+    'times': 'x',
+    'reps': 'reps',
+    'sets': 'sets',
+    'miles': 'mi',
+    'kilometers': 'km',
+    'pounds': 'lbs',
+    'kilograms': 'kg',
+  };
+  
+  return abbreviations[unit.toLowerCase()] || (unit.length > 4 ? unit.slice(0, 3) : unit);
+};
 
 export default function DayCircle({ date, event, habit, onPress }: DayCircleProps) {
   const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
@@ -96,14 +115,34 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
   };
 
   const getValueText = (): { main: string; suffix?: string } | null => {
-    // For time-based habits, show the actual time if available
-    if (habit.type === 'time_based' && event?.value !== undefined) {
-      if (habit.comparison_type === 'time_of_day') {
-        // Wake-up time: show time with AM suffix (KEEP THE DIFFERENTIATION!)
-        const timeStr = formatTime(event.value);
-        return { main: timeStr, suffix: 'AM' };
+    if (!event?.value) return null;
+    
+    // For schedule habits, show the actual time
+    if (habit.type === 'schedule') {
+      const hours = Math.floor(event.value);
+      const minutes = Math.round((event.value - hours) * 60);
+      
+      // Convert to 12-hour format
+      const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const timeStr = minutes === 0 ? `${hour12}:00` : `${hour12}:${minutes.toString().padStart(2, '0')}`;
+      
+      return { main: timeStr, suffix: ampm };
+    }
+    
+    // For duration habits, show as hours and minutes
+    if (habit.type === 'duration') {
+      if (habit.unit === 'minutes') {
+        // Value is stored directly in minutes
+        const totalMinutes = Math.round(event.value);
+        if (totalMinutes >= 60) {
+          const hours = Math.floor(totalMinutes / 60);
+          const minutes = totalMinutes % 60;
+          if (minutes === 0) return { main: `${hours}h` };
+          return { main: `${hours}h ${minutes}m` };
+        }
+        return { main: `${totalMinutes}m` };
       } else {
-        // Duration: show as hours and minutes (KEEP THE h/m FORMAT!)
         const hours = Math.floor(event.value);
         const minutes = Math.round((event.value - hours) * 60);
         if (hours === 0) {
@@ -116,9 +155,10 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
       }
     }
     
-    // For count-based habits, show the count
-    if (habit.type === 'count_based' && event?.value !== undefined) {
-      return { main: `${event.value}` };
+    // For quantity habits, show the count with abbreviated unit if available
+    if (habit.type === 'quantity') {
+      const unit = habit.unit ? ` ${getAbbreviatedUnit(habit.unit)}` : '';
+      return { main: `${event.value}${unit}` };
     }
     
     return null;
@@ -172,7 +212,7 @@ export default function DayCircle({ date, event, habit, onPress }: DayCircleProp
             )}
           </View>
         </View>
-      ) : habit.type !== 'time_since' ? (
+      ) : habit.type !== 'avoidance' && habit.type !== 'simple' ? (
         <View style={styles.placeholderContainer}>
           <Text style={styles.placeholderText}>—</Text>
         </View>

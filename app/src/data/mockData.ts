@@ -1,38 +1,92 @@
 import { Habit, HabitEvent } from '../types/habits';
 
 export const mockHabits: Habit[] = [
+  // Simple habit - just did I do it?
+  {
+    id: "habit_meditate",
+    user_id: "user_1",
+    name: "Meditate",
+    type: "simple",
+    frequency: { type: "daily" },
+    created_at: "2025-08-01T00:00:00Z",
+    archived: false
+  },
+  
+  // Quantity habit - at least X amount
+  {
+    id: "habit_read",
+    user_id: "user_1",
+    name: "Read pages",
+    type: "quantity",
+    goal_value: 10,
+    goal_direction: "at_least",
+    unit: "pages",
+    frequency: { type: "specific_days", days_of_week: ["Mon", "Wed", "Fri"] },
+    created_at: "2025-08-01T00:00:00Z",
+    archived: false
+  },
+  
+  // Duration habit - at least X time
+  {
+    id: "habit_exercise",
+    user_id: "user_1",
+    name: "Exercise",
+    type: "duration",
+    goal_value: 30,
+    goal_direction: "at_least",
+    unit: "minutes",
+    frequency: { type: "daily" },
+    created_at: "2025-08-01T00:00:00Z",
+    archived: false
+  },
+  
+  // Duration habit - no more than X time
+  {
+    id: "habit_screen_time",
+    user_id: "user_1",
+    name: "Limit social media",
+    type: "duration",
+    goal_value: 2,
+    goal_direction: "no_more_than",
+    unit: "hours",
+    frequency: { type: "daily" },
+    created_at: "2025-08-01T00:00:00Z",
+    archived: false
+  },
+  
+  // Schedule habit - by a certain time
   {
     id: "habit_wake_up",
     user_id: "user_1",
     name: "Wake up early",
-    type: "time_based",
-    comparison_type: "time_of_day",
-    is_positive: true,
-    frequency: { type: "daily" },
+    type: "schedule",
+    goal_direction: "by",
     goal_time: "07:00",
     goal_times_by_day: { Sat: "09:00", Sun: "09:00" },
-    created_at: "2025-08-01T00:00:00Z",
-    archived: false
-  },
-  {
-    id: "habit_screen_time",
-    user_id: "user_1",
-    name: "Limit phone use",
-    type: "time_based",
-    comparison_type: "duration",
-    is_positive: true,
     frequency: { type: "daily" },
-    goal_time: "02:00",
-    weekly_time_goal: 14,
     created_at: "2025-08-01T00:00:00Z",
     archived: false
   },
+  
+  // Schedule habit - after a certain time
+  {
+    id: "habit_no_smoke_until",
+    user_id: "user_1",
+    name: "No smoking until evening",
+    type: "schedule",
+    goal_direction: "after",
+    goal_time: "19:00",
+    frequency: { type: "daily" },
+    created_at: "2025-08-01T00:00:00Z",
+    archived: false
+  },
+  
+  // Avoidance habit - streak tracking
   {
     id: "habit_no_porn",
     user_id: "user_1",
     name: "Avoid porn",
-    type: "time_since",
-    is_positive: false,
+    type: "avoidance",
     frequency: { type: "daily" },
     failure_tolerance: {
       window: "monthly",
@@ -41,23 +95,13 @@ export const mockHabits: Habit[] = [
     created_at: "2025-08-01T00:00:00Z",
     archived: false
   },
-  {
-    id: "habit_read",
-    user_id: "user_1",
-    name: "Read 10 pages",
-    type: "count_based",
-    is_positive: true,
-    frequency: { type: "specific_days", days_of_week: ["Mon", "Wed", "Fri"] },
-    goal_count: 10,
-    created_at: "2025-08-01T00:00:00Z",
-    archived: false
-  },
+  
+  // Avoidance habit - drinking
   {
     id: "habit_no_drinking",
     user_id: "user_1",
     name: "Avoid drinking",
-    type: "time_since",
-    is_positive: false,
+    type: "avoidance",
     frequency: { type: "daily" },
     created_at: "2025-08-01T00:00:00Z",
     archived: false
@@ -65,280 +109,248 @@ export const mockHabits: Habit[] = [
 ];
 
 export const mockHabitEvents: HabitEvent[] = [
-  // Wake up early — success if before 7am (or 9am on weekends)
-  {
-    id: "event1",
-    habit_id: "habit_wake_up",
-    user_id: "user_1",
-    date: "2025-08-05",
-    value: 6.75, // 6:45 AM
-    status: "completed",
-    note: "Felt great running early!",
-    created_at: "2025-08-05T08:00:00Z",
-    updated_at: "2025-08-05T08:00:00Z"
-  },
-  {
-    id: "event2",
-    habit_id: "habit_wake_up",
-    user_id: "user_1",
-    date: "2025-08-06",
-    value: 9.5, // 9:30 AM
-    status: "failed",
-    note: "Slept in on Saturday",
-    created_at: "2025-08-06T09:40:00Z",
-    updated_at: "2025-08-06T09:40:00Z"
-  },
-  // {
-  //   id: "event8",
-  //   habit_id: "habit_wake_up",
-  //   user_id: "user_1",
-  //   date: "2025-08-03",
-  //   value: 6.5, // 6:30 AM
-  //   status: "completed",
-  //   note: "Early bird catches the worm!",
-  //   created_at: "2025-08-03T07:00:00Z",
-  //   updated_at: "2025-08-03T07:00:00Z"
-  // },
-  {
-    id: "event9",
-    habit_id: "habit_wake_up",
-    user_id: "user_1",
-    date: "2025-08-02",
-    value: 7.25, // 7:15 AM
-    status: "failed",
-    note: "Close but not quite",
-    created_at: "2025-08-02T08:00:00Z",
-    updated_at: "2025-08-02T08:00:00Z"
-  },
-  {
-    id: "event10",
-    habit_id: "habit_wake_up",
-    user_id: "user_1",
-    date: "2025-08-03",
-    value: 6.8, // 6:48 AM
-    status: "completed",
-    created_at: "2025-08-03T07:30:00Z",
-    updated_at: "2025-08-03T07:30:00Z"
-  },
-  {
-    id: "event11",
-    habit_id: "habit_wake_up",
-    user_id: "user_1",
-    date: "2025-08-01",
-    value: 6.9, // 6:54 AM
-    status: "completed",
-    created_at: "2025-08-01T07:30:00Z",
-    updated_at: "2025-08-01T07:30:00Z"
-  },
-  {
-    id: "event12",
-    habit_id: "habit_wake_up",
-    user_id: "user_1",
-    date: "2025-08-04",
-    value: 8.0, // 8:00 AM
-    status: "failed",
-    note: "Weekend sleep-in",
-    created_at: "2025-08-04T09:00:00Z",
-    updated_at: "2025-08-04T09:00:00Z"
-  },
+  // === MEDITATE (Simple, Daily) - August 1-30 ===
+  { id: "meditate_01", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-01", status: "completed", note: "Great start to the month", created_at: "2025-08-01T07:30:00Z", updated_at: "2025-08-01T07:30:00Z" },
+  { id: "meditate_02", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-02", status: "completed", note: "10 minutes of mindfulness", created_at: "2025-08-02T08:00:00Z", updated_at: "2025-08-02T08:00:00Z" },
+  { id: "meditate_03", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-03", status: "failed", note: "Too rushed in the morning", created_at: "2025-08-03T22:30:00Z", updated_at: "2025-08-03T22:30:00Z" },
+  { id: "meditate_04", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-04", status: "completed", note: "Evening meditation worked well", created_at: "2025-08-04T20:15:00Z", updated_at: "2025-08-04T20:15:00Z" },
+  { id: "meditate_05", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-05", status: "completed", note: "Feeling centered", created_at: "2025-08-05T07:45:00Z", updated_at: "2025-08-05T07:45:00Z" },
+  { id: "meditate_06", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-06", status: "completed", created_at: "2025-08-06T09:30:00Z", updated_at: "2025-08-06T09:30:00Z" },
+  { id: "meditate_07", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-07", status: "failed", note: "Overslept", created_at: "2025-08-07T23:00:00Z", updated_at: "2025-08-07T23:00:00Z" },
+  { id: "meditate_08", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-08", status: "completed", note: "Back on track", created_at: "2025-08-08T07:00:00Z", updated_at: "2025-08-08T07:00:00Z" },
+  { id: "meditate_09", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-09", status: "completed", created_at: "2025-08-09T08:15:00Z", updated_at: "2025-08-09T08:15:00Z" },
+  { id: "meditate_10", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-10", status: "failed", note: "Family emergency", created_at: "2025-08-10T23:45:00Z", updated_at: "2025-08-10T23:45:00Z" },
+  { id: "meditate_11", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-11", status: "completed", note: "Really needed this today", created_at: "2025-08-11T06:30:00Z", updated_at: "2025-08-11T06:30:00Z" },
+  { id: "meditate_12", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-12", status: "completed", created_at: "2025-08-12T07:30:00Z", updated_at: "2025-08-12T07:30:00Z" },
+  { id: "meditate_13", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-13", status: "completed", note: "15 minutes today", created_at: "2025-08-13T08:00:00Z", updated_at: "2025-08-13T08:00:00Z" },
+  { id: "meditate_14", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-14", status: "failed", note: "Late meeting ran over", created_at: "2025-08-14T22:30:00Z", updated_at: "2025-08-14T22:30:00Z" },
+  { id: "meditate_15", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-15", status: "completed", created_at: "2025-08-15T07:15:00Z", updated_at: "2025-08-15T07:15:00Z" },
+  { id: "meditate_16", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-16", status: "completed", note: "Weekend morning peace", created_at: "2025-08-16T09:00:00Z", updated_at: "2025-08-16T09:00:00Z" },
+  { id: "meditate_17", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-17", status: "completed", created_at: "2025-08-17T10:30:00Z", updated_at: "2025-08-17T10:30:00Z" },
+  { id: "meditate_18", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-18", status: "completed", note: "Started the week right", created_at: "2025-08-18T07:00:00Z", updated_at: "2025-08-18T07:00:00Z" },
+  { id: "meditate_19", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-19", status: "failed", note: "Completely forgot", created_at: "2025-08-19T23:15:00Z", updated_at: "2025-08-19T23:15:00Z" },
+  { id: "meditate_20", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-20", status: "completed", created_at: "2025-08-20T08:30:00Z", updated_at: "2025-08-20T08:30:00Z" },
+  { id: "meditate_21", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-21", status: "completed", note: "Guided meditation worked well", created_at: "2025-08-21T07:45:00Z", updated_at: "2025-08-21T07:45:00Z" },
+  { id: "meditate_22", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-22", status: "completed", created_at: "2025-08-22T08:00:00Z", updated_at: "2025-08-22T08:00:00Z" },
+  { id: "meditate_23", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-23", status: "completed", created_at: "2025-08-23T09:15:00Z", updated_at: "2025-08-23T09:15:00Z" },
+  { id: "meditate_24", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-24", status: "failed", note: "Traveling, couldn't find quiet space", created_at: "2025-08-24T21:00:00Z", updated_at: "2025-08-24T21:00:00Z" },
+  { id: "meditate_25", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-25", status: "completed", note: "Hotel room meditation", created_at: "2025-08-25T06:45:00Z", updated_at: "2025-08-25T06:45:00Z" },
+  { id: "meditate_26", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-26", status: "completed", created_at: "2025-08-26T07:30:00Z", updated_at: "2025-08-26T07:30:00Z" },
+  { id: "meditate_27", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-27", status: "completed", created_at: "2025-08-27T08:15:00Z", updated_at: "2025-08-27T08:15:00Z" },
+  { id: "meditate_28", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-28", status: "failed", note: "Sick day", created_at: "2025-08-28T22:00:00Z", updated_at: "2025-08-28T22:00:00Z" },
+  { id: "meditate_29", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-29", status: "completed", note: "Feeling better", created_at: "2025-08-29T09:00:00Z", updated_at: "2025-08-29T09:00:00Z" },
+  { id: "meditate_30", habit_id: "habit_meditate", user_id: "user_1", date: "2025-08-30", status: "completed", note: "Strong finish to August", created_at: "2025-08-30T07:30:00Z", updated_at: "2025-08-30T07:30:00Z" },
 
-  // Screen time — success if < 2hr
-  {
-    id: "event3",
-    habit_id: "habit_screen_time",
-    user_id: "user_1",
-    date: "2025-08-05",
-    value: 1.8,
-    score: 1,
-    status: "completed",
-    note: "Solid day, no TikTok spiral",
-    created_at: "2025-08-05T22:00:00Z",
-    updated_at: "2025-08-05T22:00:00Z"
-  },
-  {
-    id: "event4",
-    habit_id: "habit_screen_time",
-    user_id: "user_1",
-    date: "2025-08-06",
-    value: 3.5,
-    score: 0.57,
-    status: "failed",
-    note: "Watched too much YouTube",
-    created_at: "2025-08-06T22:00:00Z",
-    updated_at: "2025-08-06T22:00:00Z"
-  },
-  // {
-  //   id: "event13",
-  //   habit_id: "habit_screen_time",
-  //   user_id: "user_1",
-  //   date: "2025-08-03",
-  //   value: 1.5,
-  //   score: 1,
-  //   status: "completed",
-  //   note: "Great focus day!",
-  //   created_at: "2025-08-03T22:00:00Z",
-  //   updated_at: "2025-08-03T22:00:00Z"
-  // },
-  {
-    id: "event14",
-    habit_id: "habit_screen_time",
-    user_id: "user_1",
-    date: "2025-08-04",
-    value: 2.2,
-    score: 0.91,
-    status: "failed",
-    created_at: "2025-08-04T22:00:00Z",
-    updated_at: "2025-08-04T22:00:00Z"
-  },
-  {
-    id: "event15",
-    habit_id: "habit_screen_time",
-    user_id: "user_1",
-    date: "2025-08-03",
-    value: 1.3,
-    score: 1,
-    status: "completed",
-    created_at: "2025-08-03T22:00:00Z",
-    updated_at: "2025-08-03T22:00:00Z"
-  },
-  {
-    id: "event16",
-    habit_id: "habit_screen_time",
-    user_id: "user_1",
-    date: "2025-08-02",
-    value: 4.1,
-    score: 0.49,
-    status: "failed",
-    note: "Doom scrolling session",
-    created_at: "2025-08-02T22:00:00Z",
-    updated_at: "2025-08-02T22:00:00Z"
-  },
-  {
-    id: "event17",
-    habit_id: "habit_screen_time",
-    user_id: "user_1",
-    date: "2025-08-01",
-    value: 1.9,
-    score: 1,
-    status: "completed",
-    created_at: "2025-08-01T22:00:00Z",
-    updated_at: "2025-08-01T22:00:00Z"
-  },
+  // === READ (Quantity, 10+ pages, Mon/Wed/Fri) - August 1-30 ===
+  { id: "read_01", habit_id: "habit_read", user_id: "user_1", date: "2025-08-01", value: 15, status: "completed", note: "Fantastic chapter on habit formation", created_at: "2025-08-01T21:30:00Z", updated_at: "2025-08-01T21:30:00Z" },
+  { id: "read_02", habit_id: "habit_read", user_id: "user_1", date: "2025-08-04", value: 8, status: "failed", note: "Almost hit the goal", created_at: "2025-08-04T22:15:00Z", updated_at: "2025-08-04T22:15:00Z" },
+  { id: "read_03", habit_id: "habit_read", user_id: "user_1", date: "2025-08-05", value: 12, status: "completed", note: "Great mystery novel", created_at: "2025-08-05T20:45:00Z", updated_at: "2025-08-05T20:45:00Z" },
+  { id: "read_04", habit_id: "habit_read", user_id: "user_1", date: "2025-08-08", value: 18, status: "completed", note: "Couldn't put it down!", created_at: "2025-08-08T23:00:00Z", updated_at: "2025-08-08T23:00:00Z" },
+  { id: "read_05", habit_id: "habit_read", user_id: "user_1", date: "2025-08-11", value: 7, status: "failed", note: "Too tired after work", created_at: "2025-08-11T22:30:00Z", updated_at: "2025-08-11T22:30:00Z" },
+  { id: "read_06", habit_id: "habit_read", user_id: "user_1", date: "2025-08-12", value: 14, status: "completed", note: "Learning about productivity", created_at: "2025-08-12T21:00:00Z", updated_at: "2025-08-12T21:00:00Z" },
+  { id: "read_07", habit_id: "habit_read", user_id: "user_1", date: "2025-08-15", value: 11, status: "completed", created_at: "2025-08-15T20:30:00Z", updated_at: "2025-08-15T20:30:00Z" },
+  { id: "read_08", habit_id: "habit_read", user_id: "user_1", date: "2025-08-18", value: 9, status: "failed", note: "One page short", created_at: "2025-08-18T21:45:00Z", updated_at: "2025-08-18T21:45:00Z" },
+  { id: "read_09", habit_id: "habit_read", user_id: "user_1", date: "2025-08-19", value: 16, status: "completed", note: "Made up for yesterday", created_at: "2025-08-19T22:00:00Z", updated_at: "2025-08-19T22:00:00Z" },
+  { id: "read_10", habit_id: "habit_read", user_id: "user_1", date: "2025-08-22", value: 13, status: "completed", note: "Philosophy book getting interesting", created_at: "2025-08-22T21:15:00Z", updated_at: "2025-08-22T21:15:00Z" },
+  { id: "read_11", habit_id: "habit_read", user_id: "user_1", date: "2025-08-25", value: 6, status: "failed", note: "Traveling, only had phone", created_at: "2025-08-25T23:30:00Z", updated_at: "2025-08-25T23:30:00Z" },
+  { id: "read_12", habit_id: "habit_read", user_id: "user_1", date: "2025-08-26", value: 20, status: "completed", note: "Airport reading marathon", created_at: "2025-08-26T19:00:00Z", updated_at: "2025-08-26T19:00:00Z" },
+  { id: "read_13", habit_id: "habit_read", user_id: "user_1", date: "2025-08-29", value: 10, status: "completed", note: "Exactly hit the goal", created_at: "2025-08-29T21:30:00Z", updated_at: "2025-08-29T21:30:00Z" },
 
-  // Avoid porn
-  {
-    id: "event24",
-    habit_id: "habit_no_porn",
-    user_id: "user_1",
-    date: "2025-08-01",
-    status: "completed",
-    note: "No porn, no problem",
-    timestamp: "2025-08-07T23:00:00Z", // Actual time it occurred
-    created_at: "2025-08-07T23:00:00Z",
-    updated_at: "2025-08-07T23:00:00Z"
-  },
-  {
-    id: "event5",
-    habit_id: "habit_no_porn",
-    user_id: "user_1",
-    date: "2025-08-04",
-    status: "failed",
-    note: "Slipped late at night",
-    timestamp: "2025-08-04T23:45:00Z", // Actual time it occurred
-    created_at: "2025-08-04T23:50:00Z", // When it was logged
-    updated_at: "2025-08-04T23:50:00Z"
-  },
-  {
-    id: "event18",
-    habit_id: "habit_no_porn",
-    user_id: "user_1",
-    date: "2025-08-02",
-    status: "failed",
-    note: "Bad day, learned from it",
-    timestamp: "2025-08-02T15:20:00Z", // Afternoon relapse
-    created_at: "2025-07-30T22:30:00Z", // Logged later
-    updated_at: "2025-07-30T22:30:00Z"
-  },
-  // Additional relapse on same day as event5 (multiple relapses per day)
-  {
-    id: "event22",
-    habit_id: "habit_no_porn",
-    user_id: "user_1",
-    date: "2025-08-04",
-    status: "failed",
-    note: "Feeling stressed about work",
-    timestamp: "2025-08-04T14:25:00Z", // Earlier in the day
-    created_at: "2025-08-04T14:30:00Z",
-    updated_at: "2025-08-04T14:30:00Z"
-  },
-  // Drinking failures
-  {
-    id: "event21",
-    habit_id: "habit_no_drinking",
-    user_id: "user_1",
-    date: "2025-08-01",
-    status: "failed",
-    note: "Had a few beers at the barbecue",
-    timestamp: "2025-08-01T20:30:00Z", // Evening barbecue time
-    created_at: "2025-08-01T23:00:00Z",
-    updated_at: "2025-08-01T23:00:00Z"
-  },
-  // Multiple drinking relapses on same day
-  {
-    id: "event23",
-    habit_id: "habit_no_drinking",
-    user_id: "user_1",
-    date: "2025-08-01",
-    status: "failed", 
-    note: "Wine with dinner - couldn't resist",
-    timestamp: "2025-08-01T19:45:00Z", // Dinner time
-    created_at: "2025-08-01T19:45:00Z",
-    updated_at: "2025-08-01T19:45:00Z"
-  },
+  // === EXERCISE (Duration, 30+ minutes, Daily) - August 1-30 ===
+  { id: "exercise_01", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-01", value: 45, status: "completed", note: "Good gym session", created_at: "2025-08-01T19:00:00Z", updated_at: "2025-08-01T19:00:00Z" },
+  { id: "exercise_02", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-02", value: 60, status: "completed", note: "Long run in the park", created_at: "2025-08-02T18:30:00Z", updated_at: "2025-08-02T18:30:00Z" },
+  { id: "exercise_03", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-03", value: 25, status: "failed", note: "Cut short due to rain", created_at: "2025-08-03T17:45:00Z", updated_at: "2025-08-03T17:45:00Z" },
+  { id: "exercise_04", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-04", value: 35, status: "completed", note: "Home workout", created_at: "2025-08-04T07:30:00Z", updated_at: "2025-08-04T07:30:00Z" },
+  { id: "exercise_05", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-05", value: 50, status: "completed", note: "Weight training", created_at: "2025-08-05T19:15:00Z", updated_at: "2025-08-05T19:15:00Z" },
+  { id: "exercise_06", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-06", value: 75, status: "completed", note: "Great hiking day", created_at: "2025-08-06T16:00:00Z", updated_at: "2025-08-06T16:00:00Z" },
+  { id: "exercise_07", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-07", value: 40, status: "completed", note: "Swimming session", created_at: "2025-08-07T18:00:00Z", updated_at: "2025-08-07T18:00:00Z" },
+  { id: "exercise_08", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-08", value: 20, status: "failed", note: "Only had time for stretches", created_at: "2025-08-08T22:00:00Z", updated_at: "2025-08-08T22:00:00Z" },
+  { id: "exercise_09", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-09", value: 55, status: "completed", note: "Made up for yesterday", created_at: "2025-08-09T18:45:00Z", updated_at: "2025-08-09T18:45:00Z" },
+  { id: "exercise_10", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-10", value: 15, status: "failed", note: "Family emergency, quick walk only", created_at: "2025-08-10T21:00:00Z", updated_at: "2025-08-10T21:00:00Z" },
+  { id: "exercise_11", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-11", value: 65, status: "completed", note: "Stress relief workout", created_at: "2025-08-11T19:30:00Z", updated_at: "2025-08-11T19:30:00Z" },
+  { id: "exercise_12", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-12", value: 42, status: "completed", note: "Cardio and weights", created_at: "2025-08-12T18:15:00Z", updated_at: "2025-08-12T18:15:00Z" },
+  { id: "exercise_13", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-13", value: 30, status: "completed", note: "Just made the goal", created_at: "2025-08-13T19:00:00Z", updated_at: "2025-08-13T19:00:00Z" },
+  { id: "exercise_14", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-14", value: 28, status: "failed", note: "Meeting ran late", created_at: "2025-08-14T20:30:00Z", updated_at: "2025-08-14T20:30:00Z" },
+  { id: "exercise_15", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-15", value: 70, status: "completed", note: "Long bike ride", created_at: "2025-08-15T17:00:00Z", updated_at: "2025-08-15T17:00:00Z" },
+  { id: "exercise_16", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-16", value: 90, status: "completed", note: "Amazing weekend hike", created_at: "2025-08-16T15:30:00Z", updated_at: "2025-08-16T15:30:00Z" },
+  { id: "exercise_17", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-17", value: 35, status: "completed", note: "Recovery day yoga", created_at: "2025-08-17T10:00:00Z", updated_at: "2025-08-17T10:00:00Z" },
+  { id: "exercise_18", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-18", value: 48, status: "completed", note: "Back to the gym", created_at: "2025-08-18T18:30:00Z", updated_at: "2025-08-18T18:30:00Z" },
+  { id: "exercise_19", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-19", value: 38, status: "completed", created_at: "2025-08-19T19:15:00Z", updated_at: "2025-08-19T19:15:00Z" },
+  { id: "exercise_20", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-20", value: 52, status: "completed", note: "Full body workout", created_at: "2025-08-20T18:00:00Z", updated_at: "2025-08-20T18:00:00Z" },
+  { id: "exercise_21", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-21", value: 33, status: "completed", note: "Quick but effective", created_at: "2025-08-21T07:00:00Z", updated_at: "2025-08-21T07:00:00Z" },
+  { id: "exercise_22", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-22", value: 44, status: "completed", created_at: "2025-08-22T18:45:00Z", updated_at: "2025-08-22T18:45:00Z" },
+  { id: "exercise_23", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-23", value: 80, status: "completed", note: "Saturday tennis match", created_at: "2025-08-23T14:00:00Z", updated_at: "2025-08-23T14:00:00Z" },
+  { id: "exercise_24", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-24", value: 22, status: "failed", note: "Travel day, airport walking only", created_at: "2025-08-24T20:00:00Z", updated_at: "2025-08-24T20:00:00Z" },
+  { id: "exercise_25", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-25", value: 31, status: "completed", note: "Hotel gym workout", created_at: "2025-08-25T06:30:00Z", updated_at: "2025-08-25T06:30:00Z" },
+  { id: "exercise_26", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-26", value: 46, status: "completed", note: "Conference break workout", created_at: "2025-08-26T17:30:00Z", updated_at: "2025-08-26T17:30:00Z" },
+  { id: "exercise_27", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-27", value: 39, status: "completed", created_at: "2025-08-27T18:15:00Z", updated_at: "2025-08-27T18:15:00Z" },
+  { id: "exercise_28", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-28", value: 12, status: "failed", note: "Feeling unwell, light stretching only", created_at: "2025-08-28T20:00:00Z", updated_at: "2025-08-28T20:00:00Z" },
+  { id: "exercise_29", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-29", value: 25, status: "failed", note: "Still recovering, gentle walk", created_at: "2025-08-29T19:30:00Z", updated_at: "2025-08-29T19:30:00Z" },
+  { id: "exercise_30", habit_id: "habit_exercise", user_id: "user_1", date: "2025-08-30", value: 50, status: "completed", note: "Back to full strength!", created_at: "2025-08-30T18:00:00Z", updated_at: "2025-08-30T18:00:00Z" },
 
-  // Read habit — goal: 10 pages
-  {
-    id: "event6",
-    habit_id: "habit_read",
-    user_id: "user_1",
-    date: "2025-08-05",
-    value: 12,
-    status: "completed",
-    note: "Great chapter!",
-    created_at: "2025-08-05T21:00:00Z",
-    updated_at: "2025-08-05T21:00:00Z"
-  },
-  {
-    id: "event7",
-    habit_id: "habit_read",
-    user_id: "user_1",
-    date: "2025-08-02",
-    value: 6,
-    status: "failed",
-    note: "Didn't quite make the goal",
-    created_at: "2025-08-02T21:00:00Z",
-    updated_at: "2025-08-02T21:00:00Z"
-  },
-  {
-    id: "event19",
-    habit_id: "habit_read",
-    user_id: "user_1",
-    date: "2025-07-31",
-    value: 15,
-    status: "completed",
-    note: "Couldn't put it down!",
-    created_at: "2025-07-31T21:00:00Z",
-    updated_at: "2025-07-31T21:00:00Z"
-  },
-  {
-    id: "event20",
-    habit_id: "habit_read",
-    user_id: "user_1",
-    date: "2025-07-29",
-    value: 8,
-    status: "failed",
-    note: "Almost there",
-    created_at: "2025-07-29T21:00:00Z",
-    updated_at: "2025-07-29T21:00:00Z"
-  }
+  // === SCREEN TIME (Duration, <2 hours, Daily) - August 1-30 ===
+  { id: "screen_01", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-01", value: 1.8, status: "completed", note: "Good self-control", created_at: "2025-08-01T22:00:00Z", updated_at: "2025-08-01T22:00:00Z" },
+  { id: "screen_02", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-02", value: 3.2, status: "failed", note: "YouTube rabbit hole", created_at: "2025-08-02T23:15:00Z", updated_at: "2025-08-02T23:15:00Z" },
+  { id: "screen_03", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-03", value: 1.5, status: "completed", note: "Productive day", created_at: "2025-08-03T21:30:00Z", updated_at: "2025-08-03T21:30:00Z" },
+  { id: "screen_04", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-04", value: 2.7, status: "failed", note: "Binge watched series", created_at: "2025-08-04T23:30:00Z", updated_at: "2025-08-04T23:30:00Z" },
+  { id: "screen_05", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-05", value: 1.3, status: "completed", created_at: "2025-08-05T22:00:00Z", updated_at: "2025-08-05T22:00:00Z" },
+  { id: "screen_06", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-06", value: 4.1, status: "failed", note: "Weekend social media spiral", created_at: "2025-08-06T23:45:00Z", updated_at: "2025-08-06T23:45:00Z" },
+  { id: "screen_07", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-07", value: 1.9, status: "completed", note: "Almost went over", created_at: "2025-08-07T22:30:00Z", updated_at: "2025-08-07T22:30:00Z" },
+  { id: "screen_08", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-08", value: 1.2, status: "completed", note: "Great focus day", created_at: "2025-08-08T21:45:00Z", updated_at: "2025-08-08T21:45:00Z" },
+  { id: "screen_09", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-09", value: 2.3, status: "failed", note: "News doom scrolling", created_at: "2025-08-09T23:00:00Z", updated_at: "2025-08-09T23:00:00Z" },
+  { id: "screen_10", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-10", value: 0.8, status: "completed", note: "Emergency day, barely used phone", created_at: "2025-08-10T22:00:00Z", updated_at: "2025-08-10T22:00:00Z" },
+  { id: "screen_11", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-11", value: 1.6, status: "completed", created_at: "2025-08-11T22:15:00Z", updated_at: "2025-08-11T22:15:00Z" },
+  { id: "screen_12", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-12", value: 2.8, status: "failed", note: "Procrastinating work with TikTok", created_at: "2025-08-12T23:30:00Z", updated_at: "2025-08-12T23:30:00Z" },
+  { id: "screen_13", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-13", value: 1.4, status: "completed", note: "Back on track", created_at: "2025-08-13T21:30:00Z", updated_at: "2025-08-13T21:30:00Z" },
+  { id: "screen_14", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-14", value: 3.5, status: "failed", note: "Long video call + social media", created_at: "2025-08-14T23:45:00Z", updated_at: "2025-08-14T23:45:00Z" },
+  { id: "screen_15", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-15", value: 1.7, status: "completed", created_at: "2025-08-15T22:00:00Z", updated_at: "2025-08-15T22:00:00Z" },
+  { id: "screen_16", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-16", value: 2.9, status: "failed", note: "Saturday Netflix binge", created_at: "2025-08-16T23:00:00Z", updated_at: "2025-08-16T23:00:00Z" },
+  { id: "screen_17", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-17", value: 3.8, status: "failed", note: "Sunday lazy day", created_at: "2025-08-17T22:30:00Z", updated_at: "2025-08-17T22:30:00Z" },
+  { id: "screen_18", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-18", value: 1.1, status: "completed", note: "Monday motivation", created_at: "2025-08-18T21:15:00Z", updated_at: "2025-08-18T21:15:00Z" },
+  { id: "screen_19", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-19", value: 2.4, status: "failed", note: "Instagram reels trap", created_at: "2025-08-19T23:15:00Z", updated_at: "2025-08-19T23:15:00Z" },
+  { id: "screen_20", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-20", value: 1.8, status: "completed", created_at: "2025-08-20T22:00:00Z", updated_at: "2025-08-20T22:00:00Z" },
+  { id: "screen_21", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-21", value: 1.6, status: "completed", created_at: "2025-08-21T21:45:00Z", updated_at: "2025-08-21T21:45:00Z" },
+  { id: "screen_22", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-22", value: 2.1, status: "failed", note: "Just over the limit", created_at: "2025-08-22T22:30:00Z", updated_at: "2025-08-22T22:30:00Z" },
+  { id: "screen_23", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-23", value: 2.6, status: "failed", note: "Weekend entertainment", created_at: "2025-08-23T23:00:00Z", updated_at: "2025-08-23T23:00:00Z" },
+  { id: "screen_24", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-24", value: 5.2, status: "failed", note: "Travel day, lots of waiting time", created_at: "2025-08-24T23:30:00Z", updated_at: "2025-08-24T23:30:00Z" },
+  { id: "screen_25", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-25", value: 1.3, status: "completed", note: "Conference focus", created_at: "2025-08-25T22:00:00Z", updated_at: "2025-08-25T22:00:00Z" },
+  { id: "screen_26", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-26", value: 1.9, status: "completed", created_at: "2025-08-26T21:30:00Z", updated_at: "2025-08-26T21:30:00Z" },
+  { id: "screen_27", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-27", value: 2.2, status: "failed", note: "Catching up on messages", created_at: "2025-08-27T22:45:00Z", updated_at: "2025-08-27T22:45:00Z" },
+  { id: "screen_28", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-28", value: 3.7, status: "failed", note: "Sick day binge watching", created_at: "2025-08-28T23:15:00Z", updated_at: "2025-08-28T23:15:00Z" },
+  { id: "screen_29", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-29", value: 2.3, status: "failed", note: "Still recovering, lots of Netflix", created_at: "2025-08-29T22:30:00Z", updated_at: "2025-08-29T22:30:00Z" },
+  { id: "screen_30", habit_id: "habit_screen_time", user_id: "user_1", date: "2025-08-30", value: 1.5, status: "completed", note: "Back to healthy habits", created_at: "2025-08-30T21:45:00Z", updated_at: "2025-08-30T21:45:00Z" },
+
+  // === WAKE UP (Schedule, by 7am weekdays/9am weekends) - August 1-30 ===
+  { id: "wakeup_01", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-01", value: 6.75, status: "completed", note: "Great start to August", created_at: "2025-08-01T07:30:00Z", updated_at: "2025-08-01T07:30:00Z" },
+  { id: "wakeup_02", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-02", value: 8.2, status: "failed", note: "Slept through alarm", created_at: "2025-08-02T09:00:00Z", updated_at: "2025-08-02T09:00:00Z" },
+  { id: "wakeup_03", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-03", value: 8.5, status: "failed", note: "Weekend sleep-in", created_at: "2025-08-03T09:30:00Z", updated_at: "2025-08-03T09:30:00Z" },
+  { id: "wakeup_04", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-04", value: 6.5, status: "completed", note: "Early bird catches the worm", created_at: "2025-08-04T07:00:00Z", updated_at: "2025-08-04T07:00:00Z" },
+  { id: "wakeup_05", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-05", value: 6.9, status: "completed", created_at: "2025-08-05T07:30:00Z", updated_at: "2025-08-05T07:30:00Z" },
+  { id: "wakeup_06", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-06", value: 6.8, status: "completed", created_at: "2025-08-06T07:15:00Z", updated_at: "2025-08-06T07:15:00Z" },
+  { id: "wakeup_07", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-07", value: 7.3, status: "failed", note: "15 minutes late", created_at: "2025-08-07T08:00:00Z", updated_at: "2025-08-07T08:00:00Z" },
+  { id: "wakeup_08", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-08", value: 6.25, status: "completed", note: "Motivated Thursday", created_at: "2025-08-08T06:45:00Z", updated_at: "2025-08-08T06:45:00Z" },
+  { id: "wakeup_09", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-09", value: 8.0, status: "failed", note: "Friday fatigue", created_at: "2025-08-09T08:30:00Z", updated_at: "2025-08-09T08:30:00Z" },
+  { id: "wakeup_10", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-10", value: 8.75, status: "completed", note: "Saturday goal achieved", created_at: "2025-08-10T09:15:00Z", updated_at: "2025-08-10T09:15:00Z" },
+  { id: "wakeup_11", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-11", value: 6.67, status: "completed", note: "Sunday early rise", created_at: "2025-08-11T07:10:00Z", updated_at: "2025-08-11T07:10:00Z" },
+  { id: "wakeup_12", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-12", value: 7.1, status: "failed", note: "Monday blues", created_at: "2025-08-12T07:45:00Z", updated_at: "2025-08-12T07:45:00Z" },
+  { id: "wakeup_13", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-13", value: 6.58, status: "completed", note: "Back on track", created_at: "2025-08-13T07:00:00Z", updated_at: "2025-08-13T07:00:00Z" },
+  { id: "wakeup_14", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-14", value: 6.42, status: "completed", created_at: "2025-08-14T06:50:00Z", updated_at: "2025-08-14T06:50:00Z" },
+  { id: "wakeup_15", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-15", value: 6.83, status: "completed", created_at: "2025-08-15T07:20:00Z", updated_at: "2025-08-15T07:20:00Z" },
+  { id: "wakeup_16", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-16", value: 9.25, status: "failed", note: "Saturday sleep-in went too long", created_at: "2025-08-16T10:00:00Z", updated_at: "2025-08-16T10:00:00Z" },
+  { id: "wakeup_17", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-17", value: 8.5, status: "completed", note: "Sunday success", created_at: "2025-08-17T09:00:00Z", updated_at: "2025-08-17T09:00:00Z" },
+  { id: "wakeup_18", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-18", value: 6.92, status: "completed", created_at: "2025-08-18T07:25:00Z", updated_at: "2025-08-18T07:25:00Z" },
+  { id: "wakeup_19", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-19", value: 7.5, status: "failed", note: "Overslept badly", created_at: "2025-08-19T08:15:00Z", updated_at: "2025-08-19T08:15:00Z" },
+  { id: "wakeup_20", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-20", value: 6.33, status: "completed", note: "Recovery wake-up", created_at: "2025-08-20T06:50:00Z", updated_at: "2025-08-20T06:50:00Z" },
+  { id: "wakeup_21", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-21", value: 6.75, status: "completed", created_at: "2025-08-21T07:15:00Z", updated_at: "2025-08-21T07:15:00Z" },
+  { id: "wakeup_22", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-22", value: 6.58, status: "completed", created_at: "2025-08-22T07:05:00Z", updated_at: "2025-08-22T07:05:00Z" },
+  { id: "wakeup_23", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-23", value: 8.25, status: "completed", note: "Saturday morning hike prep", created_at: "2025-08-23T08:45:00Z", updated_at: "2025-08-23T08:45:00Z" },
+  { id: "wakeup_24", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-24", value: 5.5, status: "completed", note: "Travel day early flight", created_at: "2025-08-24T06:00:00Z", updated_at: "2025-08-24T06:00:00Z" },
+  { id: "wakeup_25", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-25", value: 6.25, status: "completed", note: "Conference day", created_at: "2025-08-25T06:45:00Z", updated_at: "2025-08-25T06:45:00Z" },
+  { id: "wakeup_26", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-26", value: 6.75, status: "completed", created_at: "2025-08-26T07:15:00Z", updated_at: "2025-08-26T07:15:00Z" },
+  { id: "wakeup_27", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-27", value: 7.25, status: "failed", note: "Late conference night", created_at: "2025-08-27T08:00:00Z", updated_at: "2025-08-27T08:00:00Z" },
+  { id: "wakeup_28", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-28", value: 9.5, status: "failed", note: "Sick day, needed rest", created_at: "2025-08-28T10:30:00Z", updated_at: "2025-08-28T10:30:00Z" },
+  { id: "wakeup_29", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-29", value: 8.75, status: "failed", note: "Still recovering", created_at: "2025-08-29T09:30:00Z", updated_at: "2025-08-29T09:30:00Z" },
+  { id: "wakeup_30", habit_id: "habit_wake_up", user_id: "user_1", date: "2025-08-30", value: 6.92, status: "completed", note: "Healthy recovery", created_at: "2025-08-30T07:25:00Z", updated_at: "2025-08-30T07:25:00Z" },
+
+  // === NO SMOKE UNTIL (Schedule, after 7pm) - August 1-30 ===
+  { id: "smoke_01", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-01", value: 20.5, status: "completed", note: "Waited until 8:30pm", created_at: "2025-08-01T21:00:00Z", updated_at: "2025-08-01T21:00:00Z" },
+  { id: "smoke_02", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-02", value: 16.75, status: "failed", note: "Cracked at 4:45pm after stressful meeting", created_at: "2025-08-02T17:00:00Z", updated_at: "2025-08-02T17:00:00Z" },
+  { id: "smoke_03", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-03", value: 19.25, status: "completed", note: "Made it to 7:15pm", created_at: "2025-08-03T19:45:00Z", updated_at: "2025-08-03T19:45:00Z" },
+  { id: "smoke_04", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-04", value: 22.0, status: "completed", note: "Didn't smoke until 10pm", created_at: "2025-08-04T22:30:00Z", updated_at: "2025-08-04T22:30:00Z" },
+  { id: "smoke_05", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-05", value: 14.33, status: "failed", note: "Lunch break weakness", created_at: "2025-08-05T15:00:00Z", updated_at: "2025-08-05T15:00:00Z" },
+  { id: "smoke_06", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-06", value: 21.5, status: "completed", note: "Weekend success", created_at: "2025-08-06T22:00:00Z", updated_at: "2025-08-06T22:00:00Z" },
+  { id: "smoke_07", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-07", value: 19.67, status: "completed", created_at: "2025-08-07T20:10:00Z", updated_at: "2025-08-07T20:10:00Z" },
+  { id: "smoke_08", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-08", value: 12.25, status: "failed", note: "Morning stress got to me", created_at: "2025-08-08T13:00:00Z", updated_at: "2025-08-08T13:00:00Z" },
+  { id: "smoke_09", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-09", value: 20.75, status: "completed", note: "Made up for yesterday", created_at: "2025-08-09T21:15:00Z", updated_at: "2025-08-09T21:15:00Z" },
+  { id: "smoke_10", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-10", value: 15.5, status: "failed", note: "Family emergency stress", created_at: "2025-08-10T16:30:00Z", updated_at: "2025-08-10T16:30:00Z" },
+  { id: "smoke_11", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-11", value: 19.0, status: "completed", note: "Exactly on time", created_at: "2025-08-11T19:30:00Z", updated_at: "2025-08-11T19:30:00Z" },
+  { id: "smoke_12", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-12", value: 19.83, status: "completed", created_at: "2025-08-12T20:20:00Z", updated_at: "2025-08-12T20:20:00Z" },
+  { id: "smoke_13", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-13", value: 18.25, status: "failed", note: "Close but not quite", created_at: "2025-08-13T18:45:00Z", updated_at: "2025-08-13T18:45:00Z" },
+  { id: "smoke_14", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-14", value: 21.25, status: "completed", note: "Evening relaxation", created_at: "2025-08-14T21:45:00Z", updated_at: "2025-08-14T21:45:00Z" },
+  { id: "smoke_15", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-15", value: 19.5, status: "completed", created_at: "2025-08-15T20:00:00Z", updated_at: "2025-08-15T20:00:00Z" },
+  { id: "smoke_16", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-16", value: 22.75, status: "completed", note: "Saturday night treat", created_at: "2025-08-16T23:15:00Z", updated_at: "2025-08-16T23:15:00Z" },
+  { id: "smoke_17", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-17", value: 20.0, status: "completed", created_at: "2025-08-17T20:30:00Z", updated_at: "2025-08-17T20:30:00Z" },
+  { id: "smoke_18", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-18", value: 17.75, status: "failed", note: "Monday deadline stress", created_at: "2025-08-18T18:15:00Z", updated_at: "2025-08-18T18:15:00Z" },
+  { id: "smoke_19", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-19", value: 13.67, status: "failed", note: "Bad day at work", created_at: "2025-08-19T14:10:00Z", updated_at: "2025-08-19T14:10:00Z" },
+  { id: "smoke_20", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-20", value: 19.17, status: "completed", note: "Recovery day", created_at: "2025-08-20T19:40:00Z", updated_at: "2025-08-20T19:40:00Z" },
+  { id: "smoke_21", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-21", value: 20.33, status: "completed", created_at: "2025-08-21T20:50:00Z", updated_at: "2025-08-21T20:50:00Z" },
+  { id: "smoke_22", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-22", value: 19.25, status: "completed", created_at: "2025-08-22T19:45:00Z", updated_at: "2025-08-22T19:45:00Z" },
+  { id: "smoke_23", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-23", value: 21.0, status: "completed", note: "Weekend discipline", created_at: "2025-08-23T21:30:00Z", updated_at: "2025-08-23T21:30:00Z" },
+  { id: "smoke_24", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-24", value: 11.5, status: "failed", note: "Airport stress", created_at: "2025-08-24T12:00:00Z", updated_at: "2025-08-24T12:00:00Z" },
+  { id: "smoke_25", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-25", value: 19.75, status: "completed", note: "Conference networking", created_at: "2025-08-25T20:15:00Z", updated_at: "2025-08-25T20:15:00Z" },
+  { id: "smoke_26", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-26", value: 20.5, status: "completed", created_at: "2025-08-26T21:00:00Z", updated_at: "2025-08-26T21:00:00Z" },
+  { id: "smoke_27", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-27", value: 18.0, status: "failed", note: "Conference ended early", created_at: "2025-08-27T18:30:00Z", updated_at: "2025-08-27T18:30:00Z" },
+  { id: "smoke_28", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-28", value: 16.25, status: "failed", note: "Feeling unwell and stressed", created_at: "2025-08-28T16:45:00Z", updated_at: "2025-08-28T16:45:00Z" },
+  { id: "smoke_29", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-29", value: 21.75, status: "completed", note: "Better self-control", created_at: "2025-08-29T22:15:00Z", updated_at: "2025-08-29T22:15:00Z" },
+  { id: "smoke_30", habit_id: "habit_no_smoke_until", user_id: "user_1", date: "2025-08-30", value: 19.33, status: "completed", note: "Good end to the month", created_at: "2025-08-30T19:50:00Z", updated_at: "2025-08-30T19:50:00Z" },
+
+  // === NO PORN (Avoidance, Daily) - August 1-30 ===
+  { id: "noporn_01", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-01", status: "completed", note: "Strong start", timestamp: "2025-08-01T23:59:00Z", created_at: "2025-08-01T23:59:00Z", updated_at: "2025-08-01T23:59:00Z" },
+  { id: "noporn_02", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-02", status: "completed", timestamp: "2025-08-02T23:59:00Z", created_at: "2025-08-02T23:59:00Z", updated_at: "2025-08-02T23:59:00Z" },
+  { id: "noporn_03", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-03", status: "failed", note: "Late night urges got the better of me", timestamp: "2025-08-03T23:15:00Z", created_at: "2025-08-03T23:30:00Z", updated_at: "2025-08-03T23:30:00Z" },
+  { id: "noporn_04", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-04", status: "completed", note: "Back on track", timestamp: "2025-08-04T23:59:00Z", created_at: "2025-08-04T23:59:00Z", updated_at: "2025-08-04T23:59:00Z" },
+  { id: "noporn_05", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-05", status: "completed", timestamp: "2025-08-05T23:59:00Z", created_at: "2025-08-05T23:59:00Z", updated_at: "2025-08-05T23:59:00Z" },
+  { id: "noporn_06", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-06", status: "completed", timestamp: "2025-08-06T23:59:00Z", created_at: "2025-08-06T23:59:00Z", updated_at: "2025-08-06T23:59:00Z" },
+  { id: "noporn_07", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-07", status: "failed", note: "Stress from work deadline", timestamp: "2025-08-07T21:45:00Z", created_at: "2025-08-07T22:00:00Z", updated_at: "2025-08-07T22:00:00Z" },
+  { id: "noporn_08", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-08", status: "completed", note: "Stayed busy to avoid temptation", timestamp: "2025-08-08T23:59:00Z", created_at: "2025-08-08T23:59:00Z", updated_at: "2025-08-08T23:59:00Z" },
+  { id: "noporn_09", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-09", status: "completed", timestamp: "2025-08-09T23:59:00Z", created_at: "2025-08-09T23:59:00Z", updated_at: "2025-08-09T23:59:00Z" },
+  { id: "noporn_10", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-10", status: "completed", note: "Family emergency kept me occupied", timestamp: "2025-08-10T23:59:00Z", created_at: "2025-08-10T23:59:00Z", updated_at: "2025-08-10T23:59:00Z" },
+  { id: "noporn_11", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-11", status: "completed", timestamp: "2025-08-11T23:59:00Z", created_at: "2025-08-11T23:59:00Z", updated_at: "2025-08-11T23:59:00Z" },
+  { id: "noporn_12", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-12", status: "failed", note: "Bored evening led to browsing", timestamp: "2025-08-12T20:30:00Z", created_at: "2025-08-12T21:00:00Z", updated_at: "2025-08-12T21:00:00Z" },
+  { id: "noporn_12b", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-12", status: "failed", note: "Second relapse same day - feeling defeated", timestamp: "2025-08-12T22:45:00Z", created_at: "2025-08-12T23:00:00Z", updated_at: "2025-08-12T23:00:00Z" },
+  { id: "noporn_13", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-13", status: "completed", note: "Learned from yesterday's mistakes", timestamp: "2025-08-13T23:59:00Z", created_at: "2025-08-13T23:59:00Z", updated_at: "2025-08-13T23:59:00Z" },
+  { id: "noporn_14", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-14", status: "completed", timestamp: "2025-08-14T23:59:00Z", created_at: "2025-08-14T23:59:00Z", updated_at: "2025-08-14T23:59:00Z" },
+  { id: "noporn_15", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-15", status: "completed", timestamp: "2025-08-15T23:59:00Z", created_at: "2025-08-15T23:59:00Z", updated_at: "2025-08-15T23:59:00Z" },
+  { id: "noporn_16", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-16", status: "completed", timestamp: "2025-08-16T23:59:00Z", created_at: "2025-08-16T23:59:00Z", updated_at: "2025-08-16T23:59:00Z" },
+  { id: "noporn_17", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-17", status: "completed", timestamp: "2025-08-17T23:59:00Z", created_at: "2025-08-17T23:59:00Z", updated_at: "2025-08-17T23:59:00Z" },
+  { id: "noporn_18", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-18", status: "failed", note: "Monday stress and loneliness", timestamp: "2025-08-18T19:20:00Z", created_at: "2025-08-18T19:30:00Z", updated_at: "2025-08-18T19:30:00Z" },
+  { id: "noporn_19", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-19", status: "completed", note: "Focused on work projects", timestamp: "2025-08-19T23:59:00Z", created_at: "2025-08-19T23:59:00Z", updated_at: "2025-08-19T23:59:00Z" },
+  { id: "noporn_20", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-20", status: "completed", timestamp: "2025-08-20T23:59:00Z", created_at: "2025-08-20T23:59:00Z", updated_at: "2025-08-20T23:59:00Z" },
+  { id: "noporn_21", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-21", status: "completed", timestamp: "2025-08-21T23:59:00Z", created_at: "2025-08-21T23:59:00Z", updated_at: "2025-08-21T23:59:00Z" },
+  { id: "noporn_22", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-22", status: "completed", timestamp: "2025-08-22T23:59:00Z", created_at: "2025-08-22T23:59:00Z", updated_at: "2025-08-22T23:59:00Z" },
+  { id: "noporn_23", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-23", status: "failed", note: "Saturday night temptation", timestamp: "2025-08-23T22:15:00Z", created_at: "2025-08-23T22:30:00Z", updated_at: "2025-08-23T22:30:00Z" },
+  { id: "noporn_24", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-24", status: "completed", note: "Travel day kept me busy", timestamp: "2025-08-24T23:59:00Z", created_at: "2025-08-24T23:59:00Z", updated_at: "2025-08-24T23:59:00Z" },
+  { id: "noporn_25", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-25", status: "completed", note: "Conference networking", timestamp: "2025-08-25T23:59:00Z", created_at: "2025-08-25T23:59:00Z", updated_at: "2025-08-25T23:59:00Z" },
+  { id: "noporn_26", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-26", status: "completed", timestamp: "2025-08-26T23:59:00Z", created_at: "2025-08-26T23:59:00Z", updated_at: "2025-08-26T23:59:00Z" },
+  { id: "noporn_27", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-27", status: "completed", timestamp: "2025-08-27T23:59:00Z", created_at: "2025-08-27T23:59:00Z", updated_at: "2025-08-27T23:59:00Z" },
+  { id: "noporn_28", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-28", status: "failed", note: "Sick day boredom and low mood", timestamp: "2025-08-28T16:45:00Z", created_at: "2025-08-28T17:00:00Z", updated_at: "2025-08-28T17:00:00Z" },
+  { id: "noporn_28b", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-28", status: "failed", note: "Third relapse - really struggling today", timestamp: "2025-08-28T20:30:00Z", created_at: "2025-08-28T21:00:00Z", updated_at: "2025-08-28T21:00:00Z" },
+  { id: "noporn_29", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-29", status: "completed", note: "Recovery and reflection", timestamp: "2025-08-29T23:59:00Z", created_at: "2025-08-29T23:59:00Z", updated_at: "2025-08-29T23:59:00Z" },
+  { id: "noporn_30", habit_id: "habit_no_porn", user_id: "user_1", date: "2025-08-30", status: "completed", note: "Strong finish to August", timestamp: "2025-08-30T23:59:00Z", created_at: "2025-08-30T23:59:00Z", updated_at: "2025-08-30T23:59:00Z" },
+
+  // === NO DRINKING (Avoidance, Daily) - August 1-30 ===
+  { id: "nodrink_01", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-01", status: "failed", note: "Birthday party - couldn't resist", timestamp: "2025-08-01T19:30:00Z", created_at: "2025-08-01T20:00:00Z", updated_at: "2025-08-01T20:00:00Z" },
+  { id: "nodrink_01b", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-01", status: "failed", note: "Wine with dinner after party", timestamp: "2025-08-01T21:15:00Z", created_at: "2025-08-01T21:30:00Z", updated_at: "2025-08-01T21:30:00Z" },
+  { id: "nodrink_02", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-02", status: "completed", note: "Recovery day, stayed strong", timestamp: "2025-08-02T23:59:00Z", created_at: "2025-08-02T23:59:00Z", updated_at: "2025-08-02T23:59:00Z" },
+  { id: "nodrink_03", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-03", status: "completed", timestamp: "2025-08-03T23:59:00Z", created_at: "2025-08-03T23:59:00Z", updated_at: "2025-08-03T23:59:00Z" },
+  { id: "nodrink_04", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-04", status: "completed", timestamp: "2025-08-04T23:59:00Z", created_at: "2025-08-04T23:59:00Z", updated_at: "2025-08-04T23:59:00Z" },
+  { id: "nodrink_05", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-05", status: "completed", timestamp: "2025-08-05T23:59:00Z", created_at: "2025-08-05T23:59:00Z", updated_at: "2025-08-05T23:59:00Z" },
+  { id: "nodrink_06", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-06", status: "completed", timestamp: "2025-08-06T23:59:00Z", created_at: "2025-08-06T23:59:00Z", updated_at: "2025-08-06T23:59:00Z" },
+  { id: "nodrink_07", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-07", status: "completed", timestamp: "2025-08-07T23:59:00Z", created_at: "2025-08-07T23:59:00Z", updated_at: "2025-08-07T23:59:00Z" },
+  { id: "nodrink_08", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-08", status: "completed", timestamp: "2025-08-08T23:59:00Z", created_at: "2025-08-08T23:59:00Z", updated_at: "2025-08-08T23:59:00Z" },
+  { id: "nodrink_09", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-09", status: "failed", note: "Friday drinks with colleagues", timestamp: "2025-08-09T18:45:00Z", created_at: "2025-08-09T19:00:00Z", updated_at: "2025-08-09T19:00:00Z" },
+  { id: "nodrink_10", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-10", status: "completed", note: "Family emergency kept me focused", timestamp: "2025-08-10T23:59:00Z", created_at: "2025-08-10T23:59:00Z", updated_at: "2025-08-10T23:59:00Z" },
+  { id: "nodrink_11", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-11", status: "completed", timestamp: "2025-08-11T23:59:00Z", created_at: "2025-08-11T23:59:00Z", updated_at: "2025-08-11T23:59:00Z" },
+  { id: "nodrink_12", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-12", status: "completed", timestamp: "2025-08-12T23:59:00Z", created_at: "2025-08-12T23:59:00Z", updated_at: "2025-08-12T23:59:00Z" },
+  { id: "nodrink_13", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-13", status: "completed", timestamp: "2025-08-13T23:59:00Z", created_at: "2025-08-13T23:59:00Z", updated_at: "2025-08-13T23:59:00Z" },
+  { id: "nodrink_14", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-14", status: "completed", timestamp: "2025-08-14T23:59:00Z", created_at: "2025-08-14T23:59:00Z", updated_at: "2025-08-14T23:59:00Z" },
+  { id: "nodrink_15", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-15", status: "failed", note: "Date night wine", timestamp: "2025-08-15T20:00:00Z", created_at: "2025-08-15T20:15:00Z", updated_at: "2025-08-15T20:15:00Z" },
+  { id: "nodrink_16", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-16", status: "failed", note: "Saturday night out", timestamp: "2025-08-16T21:30:00Z", created_at: "2025-08-16T22:00:00Z", updated_at: "2025-08-16T22:00:00Z" },
+  { id: "nodrink_16b", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-16", status: "failed", note: "Nightcap at home", timestamp: "2025-08-16T23:45:00Z", created_at: "2025-08-17T00:00:00Z", updated_at: "2025-08-17T00:00:00Z" },
+  { id: "nodrink_17", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-17", status: "completed", note: "Sunday recovery", timestamp: "2025-08-17T23:59:00Z", created_at: "2025-08-17T23:59:00Z", updated_at: "2025-08-17T23:59:00Z" },
+  { id: "nodrink_18", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-18", status: "completed", timestamp: "2025-08-18T23:59:00Z", created_at: "2025-08-18T23:59:00Z", updated_at: "2025-08-18T23:59:00Z" },
+  { id: "nodrink_19", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-19", status: "completed", timestamp: "2025-08-19T23:59:00Z", created_at: "2025-08-19T23:59:00Z", updated_at: "2025-08-19T23:59:00Z" },
+  { id: "nodrink_20", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-20", status: "completed", timestamp: "2025-08-20T23:59:00Z", created_at: "2025-08-20T23:59:00Z", updated_at: "2025-08-20T23:59:00Z" },
+  { id: "nodrink_21", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-21", status: "completed", timestamp: "2025-08-21T23:59:00Z", created_at: "2025-08-21T23:59:00Z", updated_at: "2025-08-21T23:59:00Z" },
+  { id: "nodrink_22", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-22", status: "completed", timestamp: "2025-08-22T23:59:00Z", created_at: "2025-08-22T23:59:00Z", updated_at: "2025-08-22T23:59:00Z" },
+  { id: "nodrink_23", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-23", status: "failed", note: "Wedding celebration", timestamp: "2025-08-23T17:00:00Z", created_at: "2025-08-23T17:15:00Z", updated_at: "2025-08-23T17:15:00Z" },
+  { id: "nodrink_23b", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-23", status: "failed", note: "Wedding toast", timestamp: "2025-08-23T19:30:00Z", created_at: "2025-08-23T19:45:00Z", updated_at: "2025-08-23T19:45:00Z" },
+  { id: "nodrink_23c", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-23", status: "failed", note: "Dancing and celebration", timestamp: "2025-08-23T22:15:00Z", created_at: "2025-08-23T22:30:00Z", updated_at: "2025-08-23T22:30:00Z" },
+  { id: "nodrink_24", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-24", status: "completed", note: "Travel hangover prevention", timestamp: "2025-08-24T23:59:00Z", created_at: "2025-08-24T23:59:00Z", updated_at: "2025-08-24T23:59:00Z" },
+  { id: "nodrink_25", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-25", status: "completed", note: "Conference networking without alcohol", timestamp: "2025-08-25T23:59:00Z", created_at: "2025-08-25T23:59:00Z", updated_at: "2025-08-25T23:59:00Z" },
+  { id: "nodrink_26", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-26", status: "failed", note: "Conference mixer", timestamp: "2025-08-26T19:00:00Z", created_at: "2025-08-26T19:15:00Z", updated_at: "2025-08-26T19:15:00Z" },
+  { id: "nodrink_27", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-27", status: "completed", timestamp: "2025-08-27T23:59:00Z", created_at: "2025-08-27T23:59:00Z", updated_at: "2025-08-27T23:59:00Z" },
+  { id: "nodrink_28", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-28", status: "completed", note: "Sick day - no temptation", timestamp: "2025-08-28T23:59:00Z", created_at: "2025-08-28T23:59:00Z", updated_at: "2025-08-28T23:59:00Z" },
+  { id: "nodrink_29", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-29", status: "completed", timestamp: "2025-08-29T23:59:00Z", created_at: "2025-08-29T23:59:00Z", updated_at: "2025-08-29T23:59:00Z" },
+  { id: "nodrink_30", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-30", status: "completed", note: "Strong finish to the month", timestamp: "2025-08-30T23:59:00Z", created_at: "2025-08-30T23:59:00Z", updated_at: "2025-08-30T23:59:00Z" }
 ];

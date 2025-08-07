@@ -114,6 +114,81 @@ function DurationSteppers({ timeValue, onTimeChange }: DurationSteppersProps) {
   );
 }
 
+interface QuantitySteppersProps {
+  timeValue: string;
+  unit: string;
+  onTimeChange: (text: string) => void;
+}
+
+function QuantitySteppers({ timeValue, unit, onTimeChange }: QuantitySteppersProps) {
+  // Parse current value from timeValue string
+  const parseCurrentValue = () => {
+    if (!timeValue || timeValue.trim() === '') return 0;
+    const numericMatch = timeValue.match(/(\d+(?:\.\d+)?)/);
+    return numericMatch ? parseFloat(numericMatch[1]) : 0;
+  };
+
+  const currentValue = parseCurrentValue();
+
+  const updateValue = (newValue: number) => {
+    const formattedValue = newValue % 1 === 0 ? newValue.toString() : newValue.toFixed(1);
+    onTimeChange(formattedValue);
+  };
+
+  const adjustValue = (delta: number) => {
+    const step = delta > 0 ? 1 : -1;
+    const newValue = Math.max(0, currentValue + step);
+    updateValue(newValue);
+  };
+
+  const handleSliderChange = (value: number) => {
+    updateValue(Math.round(value));
+  };
+
+  // Determine max value for slider based on goal or reasonable defaults
+  const getMaxValue = () => {
+    const currentMax = Math.max(currentValue, 50);
+    return Math.min(currentMax * 2, 500); // Cap at 500 for performance
+  };
+
+  return (
+    <View style={styles.quantityContainer}>
+      <View style={styles.quantityStepperGroup}>
+        <View style={styles.stepperControl}>
+          <TouchableOpacity 
+            style={styles.stepperButton}
+            onPress={() => adjustValue(1)}
+          >
+            <FontAwesomeIcon name="chevron-up" size={14} color={Colors.primary[500]} />
+          </TouchableOpacity>
+          <Text style={styles.quantityValue}>{currentValue}</Text>
+          <TouchableOpacity 
+            style={styles.stepperButton}
+            onPress={() => adjustValue(-1)}
+          >
+            <FontAwesomeIcon name="chevron-down" size={14} color={Colors.primary[500]} />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.quantityUnit}>{unit}</Text>
+      </View>
+      
+      <View style={styles.quantitySliderGroup}>
+        <SliderComponent
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={getMaxValue()}
+          value={currentValue}
+          onValueChange={handleSliderChange}
+          minimumTrackTintColor={Colors.primary[500]}
+          maximumTrackTintColor={Colors.neutral[300]}
+          thumbStyle={styles.sliderThumb}
+          step={1}
+        />
+      </View>
+    </View>
+  );
+}
+
 interface TimeInputSectionProps {
   habit: Habit;
   date: Date;
@@ -149,7 +224,7 @@ export default function TimeInput({
     <View style={styles.timeSection}>
       <Text style={styles.sectionLabel}>{inputLabel}</Text>
       
-      {habit.type === 'time_based' && habit.comparison_type === 'time_of_day' ? (
+      {habit.type === 'schedule' ? (
         <View style={styles.timePickerContainer}>
           <TouchableOpacity 
             style={styles.timePickerButton}
@@ -177,9 +252,15 @@ export default function TimeInput({
             />
           )}
         </View>
-      ) : habit.type === 'time_based' && habit.comparison_type === 'duration' ? (
+      ) : habit.type === 'duration' ? (
         <DurationSteppers
           timeValue={timeValue}
+          onTimeChange={onTimeChange}
+        />
+      ) : habit.type === 'quantity' && habit.unit ? (
+        <QuantitySteppers
+          timeValue={timeValue}
+          unit={habit.unit}
           onTimeChange={onTimeChange}
         />
       ) : (
@@ -317,5 +398,33 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary[500],
     width: 20,
     height: 20,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  quantityStepperGroup: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  quantityValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.neutral[700],
+    textAlign: 'center',
+    minWidth: 40,
+    paddingVertical: Spacing.xs,
+  },
+  quantityUnit: {
+    ...Typography.bodySmall,
+    fontWeight: '600',
+    color: Colors.neutral[600],
+    minWidth: 50,
+  },
+  quantitySliderGroup: {
+    flex: 1,
+    marginLeft: Spacing.sm,
   },
 });

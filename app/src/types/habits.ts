@@ -2,22 +2,28 @@ export interface Habit {
   id: string;
   user_id: string;
   name: string;
-  type: "binary" | "time_based" | "count_based" | "time_since";
-  is_positive: boolean;
+  type: "simple" | "quantity" | "duration" | "schedule" | "avoidance";
   frequency: {
     type: "daily" | "weekly" | "specific_days";
     goal_per_week?: number;
     days_of_week?: string[];
   };
-  comparison_type?: "time_of_day" | "duration";
+  
+  // For quantity/duration/schedule habits
+  goal_value?: number;
+  goal_direction?: "at_least" | "no_more_than" | "by" | "after";
+  unit?: string;
+  
+  // For schedule habits  
   goal_time?: string;
   goal_times_by_day?: Record<string, string>;
-  weekly_time_goal?: number;
-  goal_count?: number;
+  
+  // For avoidance habits
   failure_tolerance?: {
     window: "weekly" | "monthly";
     max_failures: number;
   };
+  
   created_at: string;
   archived: boolean;
 }
@@ -29,7 +35,6 @@ export interface HabitEvent {
   date: string;
   status: "completed" | "skipped" | "failed" | "not_marked";
   value?: number;
-  score?: number;
   note?: string;
   timestamp?: string; // Optional UTC timestamp for when the event actually occurred
   created_at: string;

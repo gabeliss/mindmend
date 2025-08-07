@@ -5,16 +5,28 @@ import { HabitStatus } from './habitStatusUtils';
 export const formatTimeValue = (value?: number, habit?: Habit): string => {
   if (!value || !habit) return '';
   
-  if (habit.type === 'time_based' && habit.comparison_type === 'time_of_day') {
+  if (habit.type === 'schedule') {
     return formatTime(value);
-  } else if (habit.type === 'time_based' && habit.comparison_type === 'duration') {
-    const hours = Math.floor(value);
-    const minutes = Math.round((value - hours) * 60);
-    if (hours === 0) return `${minutes}m`;
-    if (minutes === 0) return `${hours}h`;
-    return `${hours}h ${minutes}m`;
-  } else if (habit.type === 'count_based') {
-    return value.toString();
+  } else if (habit.type === 'duration') {
+    if (habit.unit === 'minutes') {
+      // Value is stored directly in minutes
+      const totalMinutes = Math.round(value);
+      if (totalMinutes >= 60) {
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        if (minutes === 0) return `${hours}h`;
+        return `${hours}h ${minutes}m`;
+      }
+      return `${totalMinutes}m`;
+    } else {
+      const hours = Math.floor(value);
+      const minutes = Math.round((value - hours) * 60);
+      if (hours === 0) return `${minutes}m`;
+      if (minutes === 0) return `${hours}h`;
+      return `${hours}h ${minutes}m`;
+    }
+  } else if (habit.type === 'quantity') {
+    return `${value}${habit.unit ? ' ' + habit.unit : ''}`;
   }
   
   return '';
@@ -23,7 +35,7 @@ export const formatTimeValue = (value?: number, habit?: Habit): string => {
 export const parseTimeValue = (input: string, habit: Habit): number | undefined => {
   if (!input.trim()) return undefined;
 
-  if (habit.type === 'time_based' && habit.comparison_type === 'time_of_day') {
+  if (habit.type === 'schedule') {
     // Parse time format like "7:30" or "7:30 AM"
     const timeMatch = input.match(/(\d{1,2}):?(\d{0,2})\s*(am|pm)?/i);
     if (timeMatch) {
@@ -36,7 +48,7 @@ export const parseTimeValue = (input: string, habit: Habit): number | undefined 
       
       return h + m / 60;
     }
-  } else if (habit.type === 'time_based' && habit.comparison_type === 'duration') {
+  } else if (habit.type === 'duration') {
     // Parse duration format like "2h 30m" or "90m" or "1.5h"
     const hourMatch = input.match(/(\d+(?:\.\d+)?)h/);
     const minMatch = input.match(/(\d+)m/);
@@ -46,8 +58,8 @@ export const parseTimeValue = (input: string, habit: Habit): number | undefined 
     if (minMatch) totalHours += parseInt(minMatch[1]) / 60;
     
     return totalHours > 0 ? totalHours : undefined;
-  } else if (habit.type === 'count_based') {
-    const count = parseInt(input);
+  } else if (habit.type === 'quantity') {
+    const count = parseFloat(input.replace(/[^0-9.]/g, ''));
     return isNaN(count) ? undefined : count;
   }
 
@@ -65,18 +77,31 @@ export const getGoalTimeForDate = (date: Date, habit: Habit): number | undefined
 };
 
 export const suggestStatusFromTime = (value: number, habit: Habit, date: Date): HabitStatus => {
-  if (habit.type === 'time_based' && habit.comparison_type === 'time_of_day') {
+  if (habit.type === 'schedule') {
     const goalTime = getGoalTimeForDate(date, habit);
-    if (goalTime && value <= goalTime) return 'completed';
-    return 'failed';
-  } else if (habit.type === 'time_based' && habit.comparison_type === 'duration') {
-    const goalHours = habit.goal_time ? parseFloat(habit.goal_time.split(':')[0]) + parseFloat(habit.goal_time.split(':')[1]) / 60 : 2;
-    if (value <= goalHours) return 'completed';
-    return 'failed';
-  } else if (habit.type === 'count_based') {
-    const goalCount = habit.goal_count || 10;
-    if (value >= goalCount) return 'completed';
-    return 'failed';
+    if (!goalTime) return 'not_logged';
+    
+    if (habit.goal_direction === 'by') {
+      return value <= goalTime ? 'completed' : 'failed';
+    } else if (habit.goal_direction === 'after') {
+      return value >= goalTime ? 'completed' : 'failed';
+    }
+  } else if (habit.type === 'duration') {
+    const goalValue = habit.goal_value || 2;
+    
+    if (habit.goal_direction === 'at_least') {
+      return value >= goalValue ? 'completed' : 'failed';
+    } else if (habit.goal_direction === 'no_more_than') {
+      return value <= goalValue ? 'completed' : 'failed';
+    }
+  } else if (habit.type === 'quantity') {
+    const goalValue = habit.goal_value || 10;
+    
+    if (habit.goal_direction === 'at_least') {
+      return value >= goalValue ? 'completed' : 'failed';
+    } else {
+      return value === goalValue ? 'completed' : 'failed';
+    }
   }
   
   return 'not_logged';

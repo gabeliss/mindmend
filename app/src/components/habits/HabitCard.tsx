@@ -60,6 +60,12 @@ export default function HabitCard({ habit, events, onDayPress }: HabitCardProps)
 
   const last7Days = getLast7Days();
   const currentStreak = getCurrentStreak();
+  
+  // Find which day is today for positioning the indicator
+  const todayIndex = last7Days.findIndex(date => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  });
 
   return (
     <View style={styles.container}>
@@ -72,7 +78,20 @@ export default function HabitCard({ habit, events, onDayPress }: HabitCardProps)
       </View>
 
       <View style={styles.calendarSection}>
-        <Text style={styles.calendarTitle}>Last 7 days</Text>
+        <View style={styles.calendarHeader}>
+          <Text style={styles.calendarTitle}>Last 7 days</Text>
+          {todayIndex !== -1 && (
+            <View style={[
+              styles.todayIndicator, 
+              { 
+                left: `${(todayIndex / 7) * 100 + (1 / 14) * 100}%`,
+                transform: [{ translateX: -18 }] // Half the width to center
+              }
+            ]}>
+              <Text style={styles.todayText}>Today</Text>
+            </View>
+          )}
+        </View>
         <View style={styles.daysContainer}>
           {last7Days.map((date, index) => (
             <DayCircle
@@ -116,11 +135,33 @@ const styles = StyleSheet.create({
   calendarSection: {
     marginTop: Spacing.sm,
   },
+  calendarHeader: {
+    position: 'relative',
+    marginBottom: Spacing.sm,
+  },
   calendarTitle: {
     ...Typography.bodySmall,
     color: Colors.neutral[600],
-    marginBottom: Spacing.sm,
     fontWeight: '500',
+  },
+  todayIndicator: {
+    position: 'absolute',
+    top: 0,
+    backgroundColor: Colors.primary[100],
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 0.5,
+    borderColor: Colors.primary[300],
+    alignItems: 'center',
+    minWidth: 36,
+  },
+  todayText: {
+    ...Typography.caption,
+    fontSize: 8,
+    fontWeight: '600',
+    color: Colors.primary[700],
+    textAlign: 'center',
   },
   daysContainer: {
     flexDirection: 'row',

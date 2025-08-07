@@ -63,9 +63,9 @@ export default function DayDetailModal({
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const scrollViewRef = React.useRef<ScrollView>(null);
 
-  // Get all relapses for this day (for time_since habits)
+  // Get all relapses for this day (for avoidance habits)
   const getDayRelapses = (): HabitEvent[] => {
-    if (habit.type !== 'time_since') return [];
+    if (habit.type !== 'avoidance') return [];
     
     const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     
@@ -83,7 +83,7 @@ export default function DayDetailModal({
       setNote(event.note || '');
       
       // Set selectedTime for DateTimePicker
-      if (event.value && habit.type === 'time_based' && habit.comparison_type === 'time_of_day') {
+      if (event.value && habit.type === 'schedule') {
         setSelectedTime(convertTimeDecimalToDate(event.value));
       }
     } else {
@@ -155,8 +155,8 @@ export default function DayDetailModal({
   };
 
   const handleSave = () => {
-    // For time_since habits with avoided status and existing relapses, show confirmation
-    if (habit.type === 'time_since' && status === 'completed') {
+    // For avoidance habits with avoided status and existing relapses, show confirmation
+    if (habit.type === 'avoidance' && status === 'completed') {
       const dayRelapses = getDayRelapses();
       if (dayRelapses.length > 0) {
         Alert.alert(
@@ -214,8 +214,8 @@ export default function DayDetailModal({
       }
     }
     
-    // For time_since habits with other statuses (skipped, not_logged), save the status
-    if (habit.type === 'time_since') {
+    // For avoidance habits with other statuses (skipped, not_logged), save the status
+    if (habit.type === 'avoidance') {
       if (status === 'skipped' || status === 'not_logged') {
         const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         
@@ -244,7 +244,7 @@ export default function DayDetailModal({
 
     let parsedValue: number | undefined;
     
-    if (habit.type === 'time_based' && habit.comparison_type === 'time_of_day') {
+    if (habit.type === 'schedule') {
       // Use selectedTime for time_of_day goals
       parsedValue = convertDateToTimeDecimal(selectedTime);
     } else {
@@ -385,7 +385,7 @@ export default function DayDetailModal({
               onShowTimePicker={showTimePickerModal}
             />
 
-            {habit.type === 'time_since' && status === 'completed' && (
+            {habit.type === 'avoidance' && status === 'completed' && (
               <View style={dayDetailModalStyles.encouragingMessageContainer}>
                 <Text style={dayDetailModalStyles.encouragingMessage}>
                   🎉 Great job staying on track today! Keep up the excellent work.
@@ -393,7 +393,7 @@ export default function DayDetailModal({
               </View>
             )}
 
-            {habit.type === 'time_since' && status !== 'completed' && (
+            {habit.type === 'avoidance' && status !== 'completed' && (
               <RelapseList
                 relapses={getDayRelapses()}
                 onAddRelapse={handleAddRelapse}
@@ -401,7 +401,7 @@ export default function DayDetailModal({
               />
             )}
 
-            {habit.type !== 'time_since' && (
+            {habit.type !== 'avoidance' && (
               <NoteInput
                 note={note}
                 onNoteChange={handleNoteChange}
