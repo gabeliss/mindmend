@@ -8,6 +8,8 @@ import {
   TextInput,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -575,44 +577,47 @@ export default function HabitDetailScreen({
       animationType="slide"
       presentationStyle="pageSheet"
     >
-      <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color={Colors.neutral[600]} />
-          </TouchableOpacity>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={50} // adjust depending on your header height
+      >
+        <SafeAreaView style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Ionicons name="close" size={24} color={Colors.neutral[600]} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Habit Details</Text>
+            <View style={styles.headerSpacer} />
+          </View>
           
-          <Text style={styles.headerTitle}>Habit Details</Text>
-          
-          <View style={styles.headerSpacer} />
-        </View>
+          <ScrollView 
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {renderOverviewSection()}
+            {renderMonthlyCalendar()}
+            {renderStatsSection()}
+            {renderEditSection()}
+            {renderNotesSection()}
+            {renderActionsSection()}
+          </ScrollView>
 
-        <ScrollView 
-          style={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {renderOverviewSection()}
-          {renderMonthlyCalendar()}
-          {renderStatsSection()}
-          {renderEditSection()}
-          {renderNotesSection()}
-          {renderActionsSection()}
-        </ScrollView>
-
-        {/* Day Detail Modal */}
-        <DayDetailModal
-          visible={dayModalVisible}
-          date={selectedDate}
-          habit={habit}
-          event={getEventForDate(selectedDate)}
-          allEvents={events}
-          onClose={() => setDayModalVisible(false)}
-          onSave={onSaveEvent}
-          onDeleteEvent={onDeleteEvent}
-        />
-      </SafeAreaView>
+          <DayDetailModal
+            visible={dayModalVisible}
+            date={selectedDate}
+            habit={habit}
+            event={getEventForDate(selectedDate)}
+            allEvents={events}
+            onClose={() => setDayModalVisible(false)}
+            onSave={onSaveEvent}
+            onDeleteEvent={onDeleteEvent}
+          />
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
+
   );
 }
 

@@ -10,6 +10,7 @@ import HabitCard from '../components/habits/HabitCard';
 import TodaysPlan from '../components/habits/TodaysPlan';
 import DayDetailModal from '../components/habits/DayDetailModal';
 import HabitDetailScreen from './HabitDetailScreen';
+import AddHabitModal from '../components/habits/AddHabitModal';
 import { getHabitEventsForHabit } from '../utils/habitUtils';
 
 export default function HabitsScreen() {
@@ -21,6 +22,7 @@ export default function HabitsScreen() {
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [habitDetailVisible, setHabitDetailVisible] = useState(false);
   const [detailHabit, setDetailHabit] = useState<Habit | null>(null);
+  const [addHabitModalVisible, setAddHabitModalVisible] = useState(false);
 
   const handleDayPress = (date: Date, habit: Habit) => {
     setSelectedDate(date);
@@ -75,8 +77,18 @@ export default function HabitsScreen() {
   };
 
   const handleAddHabit = () => {
-    console.log('Add habit pressed');
-    // TODO: Open add habit modal/screen
+    setAddHabitModalVisible(true);
+  };
+
+  const handleSaveNewHabit = (newHabit: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'archived'>) => {
+    const habit: Habit = {
+      ...newHabit,
+      id: `habit_${Date.now()}`,
+      user_id: 'user_1', // TODO: Get from auth context
+      created_at: new Date().toISOString(),
+      archived: false,
+    };
+    setHabits(prevHabits => [...prevHabits, habit]);
   };
 
   const handleHabitPress = (habit: Habit) => {
@@ -184,6 +196,12 @@ export default function HabitsScreen() {
           onReset={handleResetHabit}
         />
       )}
+
+      <AddHabitModal
+        visible={addHabitModalVisible}
+        onClose={() => setAddHabitModalVisible(false)}
+        onSave={handleSaveNewHabit}
+      />
     </SafeAreaView>
   );
 }
