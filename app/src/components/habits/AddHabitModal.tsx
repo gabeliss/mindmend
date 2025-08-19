@@ -16,6 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Typography, Spacing, BorderRadius } from '../../lib/design-system';
 import { Habit } from '../../types/habits';
+import DurationInput from '../shared/DurationInput';
+import QuantityInput from '../shared/QuantityInput';
+import TimePickerInput from '../shared/TimePickerInput';
+import { getSmartMaxValue } from '../../utils/habitInputUtils';
 
 interface AddHabitModalProps {
   visible: boolean;
@@ -32,6 +36,11 @@ interface HabitTypeOption {
   description: string;
   icon: string;
   examples: string[];
+  color: {
+    light: string;
+    medium: string;
+    dark: string;
+  };
 }
 
 const HABIT_TYPES: HabitTypeOption[] = [
@@ -40,35 +49,60 @@ const HABIT_TYPES: HabitTypeOption[] = [
     title: "Simple Habit",
     description: "Track completion of basic habits",
     icon: "checkmark-circle",
-    examples: ["Meditate", "Read before bed", "Make my bed", "Take vitamins"]
+    examples: ["Meditate", "Read before bed", "Make my bed", "Take vitamins"],
+    color: {
+      light: '#f0f9ff', // sky-50
+      medium: '#e0f2fe', // sky-100
+      dark: '#0284c7', // sky-600
+    }
   },
   {
     type: "quantity",
     title: "Track Amounts",
     description: "Count specific quantities or amounts",
     icon: "stats-chart",
-    examples: ["Read 20 pages", "Drink 8 glasses of water", "Do 50 pushups"]
+    examples: ["Read 20 pages", "Drink 8 glasses of water", "Do 50 pushups"],
+    color: {
+      light: '#f0fdf4', // green-50
+      medium: '#dcfce7', // green-100
+      dark: '#16a34a', // green-600
+    }
   },
   {
     type: "duration",
     title: "Track Time",
     description: "Monitor time spent on activities",
     icon: "time",
-    examples: ["Exercise for 30 minutes", "Practice piano for 1 hour", "Meditate for 10 minutes"]
+    examples: ["Exercise for 30 minutes", "Practice piano for 1 hour", "Meditate for 10 minutes"],
+    color: {
+      light: '#fefce8', // yellow-50
+      medium: '#fef3c7', // yellow-100
+      dark: '#ca8a04', // yellow-600
+    }
   },
   {
     type: "schedule",
     title: "Time-Based Goals",
     description: "Complete tasks by or after specific times",
     icon: "alarm",
-    examples: ["Wake up by 7 AM", "Sleep by 10 PM", "Eat lunch after 12 PM"]
+    examples: ["Wake up by 7 AM", "Sleep by 10 PM", "Eat lunch after 12 PM"],
+    color: {
+      light: '#fdf2f8', // pink-50
+      medium: '#fce7f3', // pink-100
+      dark: '#dc2626', // red-600
+    }
   },
   {
     type: "avoidance",
     title: "Break Bad Habits",
     description: "Avoid unwanted behaviors",
     icon: "close-circle",
-    examples: ["No social media", "Avoid junk food", "Stop smoking", "No phone in bed"]
+    examples: ["No social media", "Avoid junk food", "Stop smoking", "No phone in bed"],
+    color: {
+      light: '#f3f4f6', // gray-100
+      medium: '#e5e7eb', // gray-200
+      dark: '#4b5563', // gray-600
+    }
   }
 ];
 
@@ -90,11 +124,13 @@ export default function AddHabitModal({ visible, onClose, onSave }: AddHabitModa
   const [unit, setUnit] = useState('');
   const [goalDirection, setGoalDirection] = useState<'at_least' | 'no_more_than' | 'by' | 'after'>('at_least');
   const [goalTime, setGoalTime] = useState('');
+  const [goalTimeDate, setGoalTimeDate] = useState(new Date());
   const [frequencyType, setFrequencyType] = useState<FrequencyType>('daily');
   const [weeklyGoal, setWeeklyGoal] = useState('');
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [maxFailures, setMaxFailures] = useState('');
   const [failureWindow, setFailureWindow] = useState<'weekly' | 'monthly'>('weekly');
+
 
   const resetForm = () => {
     setStep(1);
@@ -104,6 +140,7 @@ export default function AddHabitModal({ visible, onClose, onSave }: AddHabitModa
     setUnit('');
     setGoalDirection('at_least');
     setGoalTime('');
+    setGoalTimeDate(new Date());
     setFrequencyType('daily');
     setWeeklyGoal('');
     setSelectedDays([]);
@@ -141,13 +178,23 @@ export default function AddHabitModal({ visible, onClose, onSave }: AddHabitModa
     }
 
     // Validate based on habit type
-    if ((selectedType === 'quantity' || selectedType === 'duration') && (!goalValue || parseFloat(goalValue) <= 0)) {
-      Alert.alert('Error', 'Please enter a valid goal value');
+    if (selectedType === 'duration' && !goalValue.trim()) {
+      Alert.alert('Error', 'Please set a goal duration');
+      return;
+    }
+
+    if (selectedType === 'quantity' && (!goalValue || parseFloat(goalValue) <= 0)) {
+      Alert.alert('Error', 'Please set a goal amount');
+      return;
+    }
+
+    if (selectedType === 'quantity' && !unit.trim()) {
+      Alert.alert('Error', 'Please enter a unit (e.g., pages, glasses)');
       return;
     }
 
     if (selectedType === 'schedule' && !goalTime.trim()) {
-      Alert.alert('Error', 'Please enter a goal time');
+      Alert.alert('Error', 'Please select a target time');
       return;
     }
 
@@ -181,12 +228,25 @@ export default function AddHabitModal({ visible, onClose, onSave }: AddHabitModa
     };
 
     // Add type-specific fields
-    if (selectedType === 'quantity' || selectedType === 'duration') {
+    if (selectedType === 'duration') {
+      // Convert duration string "1h 30m" to decimal hours
+      const parseDurationToHours = (durationStr: string): number => {
+        const hourMatch = durationStr.match(/(\d+)h/);
+        const minMatch = durationStr.match(/(\d+)m/);
+        const hours = hourMatch ? parseInt(hourMatch[1]) : 0;
+        const minutes = minMatch ? parseInt(minMatch[1]) : 0;
+        return hours + (minutes / 60); // Store as decimal hours
+      };
+      
+      newHabit.goal_value = parseDurationToHours(goalValue);
+      newHabit.goal_direction = goalDirection;
+      newHabit.unit = 'hours'; // Always use hours for consistency
+    }
+
+    if (selectedType === 'quantity') {
       newHabit.goal_value = parseFloat(goalValue);
       newHabit.goal_direction = goalDirection;
-      if (unit.trim()) {
-        newHabit.unit = unit.trim();
-      }
+      newHabit.unit = unit.trim();
     }
 
     if (selectedType === 'schedule') {
@@ -216,7 +276,11 @@ export default function AddHabitModal({ visible, onClose, onSave }: AddHabitModa
             key={habitType.type}
             style={[
               styles.typeOption,
-              selectedType === habitType.type && styles.typeOptionSelected
+              { backgroundColor: selectedType === habitType.type ? habitType.color.medium : habitType.color.light },
+              selectedType === habitType.type && { 
+                borderColor: habitType.color.dark,
+                borderWidth: 2
+              }
             ]}
             onPress={() => setSelectedType(habitType.type)}
           >
@@ -224,12 +288,12 @@ export default function AddHabitModal({ visible, onClose, onSave }: AddHabitModa
               <Ionicons
                 name={habitType.icon as any}
                 size={24}
-                color={selectedType === habitType.type ? Colors.primary[600] : Colors.neutral[600]}
+                color={selectedType === habitType.type ? habitType.color.dark : Colors.neutral[600]}
               />
               <View style={styles.typeInfo}>
                 <Text style={[
                   styles.typeTitle,
-                  selectedType === habitType.type && styles.typeTitleSelected
+                  selectedType === habitType.type && { color: habitType.color.dark }
                 ]}>
                   {habitType.title}
                 </Text>
@@ -266,30 +330,67 @@ export default function AddHabitModal({ visible, onClose, onSave }: AddHabitModa
           />
         </View>
 
-        {/* Quantity/Duration specific fields */}
-        {(selectedType === 'quantity' || selectedType === 'duration') && (
+        {/* Duration specific fields */}
+        {selectedType === 'duration' && (
           <>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Goal Amount *</Text>
-              <TextInput
-                style={styles.textInput}
+              <Text style={styles.fieldLabel}>Goal Duration *</Text>
+              <DurationInput
                 value={goalValue}
-                onChangeText={setGoalValue}
-                placeholder="e.g., 30, 8, 20"
-                keyboardType="numeric"
+                onChange={setGoalValue}
+                maxHours={12}
               />
             </View>
 
             <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Goal Type</Text>
+              <View style={styles.optionRow}>
+                <TouchableOpacity
+                  style={[styles.option, goalDirection === 'at_least' && styles.optionSelected]}
+                  onPress={() => setGoalDirection('at_least')}
+                >
+                  <Text style={[styles.optionText, goalDirection === 'at_least' && styles.optionTextSelected]}>
+                    At least
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.option, goalDirection === 'no_more_than' && styles.optionSelected]}
+                  onPress={() => setGoalDirection('no_more_than')}
+                >
+                  <Text style={[styles.optionText, goalDirection === 'no_more_than' && styles.optionTextSelected]}>
+                    No more than
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* Quantity specific fields */}
+        {selectedType === 'quantity' && (
+          <>
+            <View style={styles.field}>
               <Text style={styles.fieldLabel}>
-                Unit {selectedType === 'duration' ? '(e.g., minutes, hours)' : '(e.g., pages, glasses, reps)'}
+                Unit (e.g., pages, glasses, reps) *
               </Text>
               <TextInput
                 style={styles.textInput}
                 value={unit}
                 onChangeText={setUnit}
-                placeholder={selectedType === 'duration' ? 'minutes' : 'pages'}
+                placeholder="pages"
                 maxLength={20}
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Goal Amount *</Text>
+              <QuantityInput
+                value={goalValue}
+                unit={unit || 'units'}
+                onChange={setGoalValue}
+                maxValue={getSmartMaxValue(unit)}
+                allowDecimals={false}
               />
             </View>
 
@@ -322,12 +423,17 @@ export default function AddHabitModal({ visible, onClose, onSave }: AddHabitModa
           <>
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Target Time *</Text>
-              <TextInput
-                style={styles.textInput}
-                value={goalTime}
-                onChangeText={setGoalTime}
-                placeholder="e.g., 7:00 AM, 10:30 PM"
-                maxLength={10}
+              <TimePickerInput
+                value={goalTimeDate}
+                onChange={(time) => {
+                  setGoalTimeDate(time);
+                  // Convert to time string format for validation
+                  const hours = time.getHours();
+                  const minutes = time.getMinutes();
+                  const timeString = `${hours}:${minutes.toString().padStart(2, '0')}`;
+                  setGoalTime(timeString);
+                }}
+                placeholder="Select target time"
               />
             </View>
 
@@ -608,16 +714,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   typeOption: {
-    backgroundColor: Colors.neutral[100],
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: Colors.neutral[200],
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
-  },
-  typeOptionSelected: {
-    borderColor: Colors.primary[600],
-    backgroundColor: Colors.primary[50],
   },
   typeHeader: {
     flexDirection: 'row',
@@ -632,9 +733,6 @@ const styles = StyleSheet.create({
     ...Typography.h4,
     color: Colors.neutral[800],
     marginBottom: Spacing.xs,
-  },
-  typeTitleSelected: {
-    color: Colors.primary[700],
   },
   typeDescription: {
     ...Typography.body,

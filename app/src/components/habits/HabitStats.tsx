@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors, Typography, Spacing } from '../../lib/design-system';
 import { Habit } from '../../types/habits';
+import { getHabitGoalText } from '../../utils/habitGoalUtils';
 
 const formatTimeToAMPM = (timeString?: string): string => {
   if (!timeString) return '';
@@ -24,57 +25,7 @@ interface HabitStatsProps {
 
 export default function HabitStats({ habit, currentStreak }: HabitStatsProps) {
   const getGoalText = (): string => {
-    switch (habit.type) {
-      case 'simple':
-        return 'Goal: complete daily';
-      case 'schedule':
-        // Check if there are different weekend goals
-        if (habit.goal_times_by_day && (habit.goal_times_by_day.Sat || habit.goal_times_by_day.Sun)) {
-          const weekdayGoal = formatTimeToAMPM(habit.goal_time);
-          const weekendGoal = formatTimeToAMPM(habit.goal_times_by_day.Sat || habit.goal_times_by_day.Sun);
-          const direction = habit.goal_direction === 'by' ? 'by' : 'after';
-          return `Goal: ${direction} ${weekdayGoal} on weekdays, ${weekendGoal} on weekends`;
-        }
-        const direction = habit.goal_direction === 'by' ? 'by' : 'after';
-        return `Goal: ${direction} ${formatTimeToAMPM(habit.goal_time)}`;
-      case 'duration':
-        const goalValue = habit.goal_value || 2;
-        const unit = habit.unit || 'hours';
-        const directionText = habit.goal_direction === 'at_least' ? 'at least' : 'under';
-        
-        let goalText: string;
-        if (unit === 'hours') {
-          const wholeHours = Math.floor(goalValue);
-          const minutes = Math.round((goalValue - wholeHours) * 60);
-          
-          if (minutes === 0) {
-            goalText = `${wholeHours} hr${wholeHours !== 1 ? 's' : ''}`;
-          } else if (minutes === 30) {
-            goalText = `${wholeHours}.5 hrs`;
-          } else {
-            goalText = `${wholeHours}h ${minutes}m`;
-          }
-        } else if (unit === 'minutes') {
-          goalText = `${goalValue} min`;
-        } else {
-          goalText = `${goalValue} ${unit}`;
-        }
-        
-        return `Goal: ${directionText} ${goalText}/day`;
-      case 'quantity':
-        const quantityGoal = habit.goal_value || 10;
-        const quantityUnit = habit.unit || '';
-        const quantityDirection = habit.goal_direction === 'at_least' ? 'at least' : 'exactly';
-        return `Goal: ${quantityDirection} ${quantityGoal}${quantityUnit ? ' ' + quantityUnit : ''}`;
-      case 'avoidance':
-        if (habit.failure_tolerance) {
-          return `Goal: avoid completely (max ${habit.failure_tolerance.max_failures} failures/${habit.failure_tolerance.window})`;
-        }
-        return 'Goal: avoid completely';
-      default:
-        return habit.frequency.type === 'daily' ? 'Daily goal' : 
-               `${habit.frequency.goal_per_week}x per week`;
-    }
+    return getHabitGoalText(habit, { includeFrequency: true });
   };
 
   const getFrequencyText = (): string => {

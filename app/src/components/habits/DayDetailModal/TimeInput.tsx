@@ -1,20 +1,20 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, TextInput, StyleSheet } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { Platform } from 'expo-modules-core';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FontAwesome } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius } from '../../../lib/design-system';
 import { Habit } from '../../../types/habits';
-import { formatTime } from '../../../utils/habitUtils';
 import { shouldShowTimeInput, getTimeInputLabel, getTimeInputPlaceholder, getGoalDescription } from '../../../utils/habitValidationUtils';
 import { HabitStatus } from '../../../utils/habitStatusUtils';
+import { getSmartMaxValue } from '../../../utils/habitInputUtils';
+import QuantityInput from '../../shared/QuantityInput';
+import DurationInput from '../../shared/DurationInput';
 
 // Type assertion to fix TypeScript compatibility  
 const DateTimePickerComponent = DateTimePicker as any;
 const FontAwesomeIcon = FontAwesome as any;
-const SliderComponent = Slider as any;
 
 const formatTimeWithAMPM = (date: Date): string => {
   const hours = date.getHours();
@@ -28,166 +28,6 @@ const formatTimeWithAMPM = (date: Date): string => {
   
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 };
-
-interface DurationSteppersProps {
-  timeValue: string;
-  onTimeChange: (text: string) => void;
-}
-
-function DurationSteppers({ timeValue, onTimeChange }: DurationSteppersProps) {
-  // Parse current values from timeValue string
-  const parseCurrentValues = () => {
-    if (!timeValue) return { hours: 0, minutes: 0 };
-    
-    const hourMatch = timeValue.match(/(\d+)h/);
-    const minMatch = timeValue.match(/(\d+)m/);
-    
-    const hours = hourMatch ? parseInt(hourMatch[1]) : 0;
-    const minutes = minMatch ? parseInt(minMatch[1]) : 0;
-    
-    return { hours, minutes };
-  };
-
-  const { hours, minutes } = parseCurrentValues();
-
-  const updateTime = (newHours: number, newMinutes: number) => {
-    let formattedTime = '';
-    if (newHours > 0 && newMinutes > 0) {
-      formattedTime = `${newHours}h ${newMinutes}m`;
-    } else if (newHours > 0) {
-      formattedTime = `${newHours}h`;
-    } else if (newMinutes > 0) {
-      formattedTime = `${newMinutes}m`;
-    }
-    onTimeChange(formattedTime);
-  };
-
-  const adjustHours = (delta: number) => {
-    const newHours = Math.max(0, Math.min(23, hours + delta));
-    updateTime(newHours, minutes);
-  };
-
-  const handleMinuteSliderChange = (value: number) => {
-    const newMinutes = Math.round(value);
-    updateTime(hours, newMinutes);
-  };
-
-  return (
-    <View style={styles.durationContainer}>
-      <View style={styles.stepperGroup}>
-        <Text style={styles.stepperLabel}>hrs</Text>
-        <View style={styles.stepperControl}>
-          <TouchableOpacity 
-            style={styles.stepperButton}
-            onPress={() => adjustHours(1)}
-          >
-            <FontAwesomeIcon name="chevron-up" size={14} color={Colors.primary[500]} />
-          </TouchableOpacity>
-          <Text style={styles.stepperValue}>{hours}</Text>
-          <TouchableOpacity 
-            style={styles.stepperButton}
-            onPress={() => adjustHours(-1)}
-          >
-            <FontAwesomeIcon name="chevron-down" size={14} color={Colors.primary[500]} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-      <View style={styles.sliderGroup}>
-        <Text style={styles.stepperLabel}>min</Text>
-        <View style={styles.sliderContainer}>
-          <Text style={styles.sliderValue}>{minutes}</Text>
-          <SliderComponent
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={59}
-            value={minutes}
-            onValueChange={handleMinuteSliderChange}
-            minimumTrackTintColor={Colors.primary[500]}
-            maximumTrackTintColor={Colors.neutral[300]}
-            thumbStyle={styles.sliderThumb}
-            step={1}
-          />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-interface QuantitySteppersProps {
-  timeValue: string;
-  unit: string;
-  onTimeChange: (text: string) => void;
-}
-
-function QuantitySteppers({ timeValue, unit, onTimeChange }: QuantitySteppersProps) {
-  // Parse current value from timeValue string
-  const parseCurrentValue = () => {
-    if (!timeValue || timeValue.trim() === '') return 0;
-    const numericMatch = timeValue.match(/(\d+(?:\.\d+)?)/);
-    return numericMatch ? parseFloat(numericMatch[1]) : 0;
-  };
-
-  const currentValue = parseCurrentValue();
-
-  const updateValue = (newValue: number) => {
-    const formattedValue = newValue % 1 === 0 ? newValue.toString() : newValue.toFixed(1);
-    onTimeChange(formattedValue);
-  };
-
-  const adjustValue = (delta: number) => {
-    const step = delta > 0 ? 1 : -1;
-    const newValue = Math.max(0, currentValue + step);
-    updateValue(newValue);
-  };
-
-  const handleSliderChange = (value: number) => {
-    updateValue(Math.round(value));
-  };
-
-  // Determine max value for slider based on goal or reasonable defaults
-  const getMaxValue = () => {
-    const currentMax = Math.max(currentValue, 50);
-    return Math.min(currentMax * 2, 500); // Cap at 500 for performance
-  };
-
-  return (
-    <View style={styles.quantityContainer}>
-      <View style={styles.quantityStepperGroup}>
-        <View style={styles.stepperControl}>
-          <TouchableOpacity 
-            style={styles.stepperButton}
-            onPress={() => adjustValue(1)}
-          >
-            <FontAwesomeIcon name="chevron-up" size={14} color={Colors.primary[500]} />
-          </TouchableOpacity>
-          <Text style={styles.quantityValue}>{currentValue}</Text>
-          <TouchableOpacity 
-            style={styles.stepperButton}
-            onPress={() => adjustValue(-1)}
-          >
-            <FontAwesomeIcon name="chevron-down" size={14} color={Colors.primary[500]} />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.quantityUnit}>{unit}</Text>
-      </View>
-      
-      <View style={styles.quantitySliderGroup}>
-        <SliderComponent
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={getMaxValue()}
-          value={currentValue}
-          onValueChange={handleSliderChange}
-          minimumTrackTintColor={Colors.primary[500]}
-          maximumTrackTintColor={Colors.neutral[300]}
-          thumbStyle={styles.sliderThumb}
-          step={1}
-        />
-      </View>
-    </View>
-  );
-}
 
 interface TimeInputSectionProps {
   habit: Habit;
@@ -253,15 +93,18 @@ export default function TimeInput({
           )}
         </View>
       ) : habit.type === 'duration' ? (
-        <DurationSteppers
-          timeValue={timeValue}
-          onTimeChange={onTimeChange}
+        <DurationInput
+          value={timeValue}
+          onChange={onTimeChange}
+          maxHours={12}
         />
       ) : habit.type === 'quantity' && habit.unit ? (
-        <QuantitySteppers
-          timeValue={timeValue}
+        <QuantityInput
+          value={timeValue}
           unit={habit.unit}
-          onTimeChange={onTimeChange}
+          onChange={onTimeChange}
+          maxValue={getSmartMaxValue(habit.unit)}
+          allowDecimals={false}
         />
       ) : (
         <TextInput

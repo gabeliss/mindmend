@@ -146,28 +146,16 @@ export default function DayCircle({ date, event, habit, onPress, size = 'default
       return { main: timeStr, suffix: ampm };
     }
     
-    // For duration habits, show as hours and minutes
+    // For duration habits, show as hours and minutes (always decimal hours)
     if (habit.type === 'duration') {
-      if (habit.unit === 'minutes') {
-        // Value is stored directly in minutes
-        const totalMinutes = Math.round(event.value);
-        if (totalMinutes >= 60) {
-          const hours = Math.floor(totalMinutes / 60);
-          const minutes = totalMinutes % 60;
-          if (minutes === 0) return { main: `${hours}h` };
-          return { main: `${hours}h ${minutes}m` };
-        }
-        return { main: `${totalMinutes}m` };
+      const hours = Math.floor(event.value);
+      const minutes = Math.round((event.value - hours) * 60);
+      if (hours === 0) {
+        return { main: `${minutes}m` };
+      } else if (minutes === 0) {
+        return { main: `${hours}h` };
       } else {
-        const hours = Math.floor(event.value);
-        const minutes = Math.round((event.value - hours) * 60);
-        if (hours === 0) {
-          return { main: `${minutes}m` };
-        } else if (minutes === 0) {
-          return { main: `${hours}h` };
-        } else {
-          return { main: `${hours}h ${minutes}m` };
-        }
+        return { main: `${hours}h ${minutes}m` };
       }
     }
     

@@ -18,6 +18,7 @@ import { Colors, Typography, Spacing, BorderRadius } from '../lib/design-system'
 import { Habit, HabitEvent } from '../types/habits';
 import DayDetailModal from '../components/habits/DayDetailModal';
 import DayCircle from '../components/habits/DayCircle';
+import { getHabitGoalText } from '../utils/habitGoalUtils';
 
 interface HabitDetailScreenProps {
   visible: boolean;
@@ -133,33 +134,10 @@ export default function HabitDetailScreen({
   const getGoalSummary = (): string => {
     if (!habit) return '';
     
-    const { type, goal_value, goal_direction, unit, goal_time, frequency } = habit;
-    
-    let summary = '';
-    
-    if (type === 'simple') {
-      summary = habit.name;
-    } else if (type === 'quantity' || type === 'duration') {
-      const direction = goal_direction === 'at_least' ? 'at least' : 'no more than';
-      summary = `${direction} ${goal_value} ${unit || 'units'}`;
-    } else if (type === 'schedule') {
-      const direction = goal_direction === 'by' ? 'by' : 'after';
-      summary = `${direction} ${goal_time}`;
-    } else if (type === 'avoidance') {
-      summary = `Avoid ${habit.name.toLowerCase()}`;
-    }
-
-    // Add frequency info
-    if (frequency.type === 'daily') {
-      summary += ' daily';
-    } else if (frequency.type === 'weekly' && frequency.goal_per_week) {
-      summary += ` ${frequency.goal_per_week} times per week`;
-    } else if (frequency.type === 'specific_days' && frequency.days_of_week) {
-      const days = frequency.days_of_week.join(', ');
-      summary += ` on ${days}`;
-    }
-
-    return summary;
+    return getHabitGoalText(habit, { 
+      includeFrequency: false, 
+      includePrefix: false 
+    });
   };
 
   const calculateStreak = (): { current: number; longest: number } => {

@@ -8,23 +8,12 @@ export const formatTimeValue = (value?: number, habit?: Habit): string => {
   if (habit.type === 'schedule') {
     return formatTime(value);
   } else if (habit.type === 'duration') {
-    if (habit.unit === 'minutes') {
-      // Value is stored directly in minutes
-      const totalMinutes = Math.round(value);
-      if (totalMinutes >= 60) {
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        if (minutes === 0) return `${hours}h`;
-        return `${hours}h ${minutes}m`;
-      }
-      return `${totalMinutes}m`;
-    } else {
-      const hours = Math.floor(value);
-      const minutes = Math.round((value - hours) * 60);
-      if (hours === 0) return `${minutes}m`;
-      if (minutes === 0) return `${hours}h`;
-      return `${hours}h ${minutes}m`;
-    }
+    // Duration habits always store as decimal hours
+    const hours = Math.floor(value);
+    const minutes = Math.round((value - hours) * 60);
+    if (hours === 0) return `${minutes}m`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}m`;
   } else if (habit.type === 'quantity') {
     return `${value}${habit.unit ? ' ' + habit.unit : ''}`;
   }
