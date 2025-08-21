@@ -53,8 +53,8 @@ export interface DailyPlan {
 export interface DailyPlanItem {
   id: string;
   daily_plan_id: string;
-  time: string;
+  time?: string; // Optional timestamp (e.g., "14:30" or "2:30 PM")
   description: string;
-  linked_habit_id?: string;
   completed: boolean;
+  order: number; // For drag-and-drop reordering
 }

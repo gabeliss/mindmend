@@ -1,4 +1,4 @@
-import { Habit, HabitEvent } from '../types/habits';
+import { Habit, HabitEvent, DailyPlan, DailyPlanItem } from '../types/habits';
 
 export const mockHabits: Habit[] = [
   // Simple habit - just did I do it?
@@ -353,4 +353,78 @@ export const mockHabitEvents: HabitEvent[] = [
   { id: "nodrink_28", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-28", status: "completed", note: "Sick day - no temptation", timestamp: "2025-08-28T23:59:00Z", created_at: "2025-08-28T23:59:00Z", updated_at: "2025-08-28T23:59:00Z" },
   { id: "nodrink_29", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-29", status: "completed", timestamp: "2025-08-29T23:59:00Z", created_at: "2025-08-29T23:59:00Z", updated_at: "2025-08-29T23:59:00Z" },
   { id: "nodrink_30", habit_id: "habit_no_drinking", user_id: "user_1", date: "2025-08-30", status: "completed", note: "Strong finish to the month", timestamp: "2025-08-30T23:59:00Z", created_at: "2025-08-30T23:59:00Z", updated_at: "2025-08-30T23:59:00Z" }
+];
+
+export const mockDailyPlans: DailyPlan[] = [
+  {
+    id: "plan_2025_08_20",
+    user_id: "user_1",
+    date: "2025-08-20",
+    entries: [
+      {
+        id: "plan_item_1",
+        daily_plan_id: "plan_2025_08_20",
+        time: "06:00",
+        description: "Morning meditation",
+        completed: true,
+        order: 1
+      },
+      {
+        id: "plan_item_2", 
+        daily_plan_id: "plan_2025_08_20",
+        time: "06:30",
+        description: "Workout - legs & cardio",
+        completed: true,
+        order: 2
+      },
+      {
+        id: "plan_item_3",
+        daily_plan_id: "plan_2025_08_20", 
+        time: "08:00",
+        description: "Healthy breakfast & vitamins",
+        completed: true,
+        order: 3
+      },
+      {
+        id: "plan_item_4",
+        daily_plan_id: "plan_2025_08_20",
+        time: "09:00",
+        description: "Deep work - project proposal",
+        completed: true,
+        order: 4
+      },
+      {
+        id: "plan_item_5",
+        daily_plan_id: "plan_2025_08_20",
+        time: "12:00", 
+        description: "Lunch & walk outside",
+        completed: true,
+        order: 5
+      },
+      {
+        id: "plan_item_6",
+        daily_plan_id: "plan_2025_08_20",
+        time: "14:00",
+        description: "Team meetings & emails", 
+        completed: true,
+        order: 6
+      },
+      {
+        id: "plan_item_7",
+        daily_plan_id: "plan_2025_08_20",
+        description: "Read pages",
+        completed: false,
+        order: 7
+      },
+      {
+        id: "plan_item_8",
+        daily_plan_id: "plan_2025_08_20", 
+        description: "Call parents",
+        completed: true,
+        order: 8
+      }
+    ],
+    note: "Focus day - minimize distractions",
+    created_at: "2025-08-19T22:30:00Z"
+  }
 ];

@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import HabitsScreen from './src/screens/HabitsScreen';
 import JournalScreen from './src/screens/JournalScreen';
@@ -17,8 +18,9 @@ const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <NavigationContainer>
         <StatusBar style="dark" />
         <Tab.Navigator
           screenOptions={({ route }) => ({
@@ -67,5 +69,6 @@ export default function App() {
         </Tab.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

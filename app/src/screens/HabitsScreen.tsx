@@ -4,25 +4,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Typography, Spacing, BorderRadius } from '../lib/design-system';
-import { Habit, HabitEvent } from '../types/habits';
-import { mockHabits, mockHabitEvents } from '../data/mockData';
+import { Habit, HabitEvent, DailyPlan, DailyPlanItem } from '../types/habits';
+import { mockHabits, mockHabitEvents, mockDailyPlans } from '../data/mockData';
 import HabitCard from '../components/habits/HabitCard';
 import TodaysPlan from '../components/habits/TodaysPlan';
 import DayDetailModal from '../components/habits/DayDetailModal';
 import HabitDetailScreen from './HabitDetailScreen';
 import AddHabitModal from '../components/habits/AddHabitModal';
+import AddPlanItemModal from '../components/habits/AddPlanItemModal';
 import { getHabitEventsForHabit } from '../utils/habitUtils';
 
 export default function HabitsScreen() {
   const [habits, setHabits] = useState<Habit[]>(mockHabits);
   const [events, setEvents] = useState<HabitEvent[]>(mockHabitEvents);
-  const [showTodaysPlan, setShowTodaysPlan] = useState(true);
+  const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>(mockDailyPlans);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [habitDetailVisible, setHabitDetailVisible] = useState(false);
   const [detailHabit, setDetailHabit] = useState<Habit | null>(null);
   const [addHabitModalVisible, setAddHabitModalVisible] = useState(false);
+  const [addPlanItemModalVisible, setAddPlanItemModalVisible] = useState(false);
+  const [editingPlanItem, setEditingPlanItem] = useState<DailyPlanItem | null>(null);
 
   const handleDayPress = (date: Date, habit: Habit) => {
     setSelectedDate(date);
@@ -123,6 +126,94 @@ export default function HabitsScreen() {
     setEvents(prevEvents => prevEvents.filter(e => e.habit_id !== habitId));
   };
 
+  const getTodaysPlan = (): DailyPlan | undefined => {
+    const today = new Date();
+    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return dailyPlans.find(plan => plan.date === todayString);
+  };
+
+  const handlePlanItemToggle = (itemId: string) => {
+    setDailyPlans(prevPlans => 
+      prevPlans.map(plan => ({
+        ...plan,
+        entries: plan.entries.map(entry => 
+          entry.id === itemId 
+            ? { ...entry, completed: !entry.completed }
+            : entry
+        )
+      }))
+    );
+  };
+
+  const handleAddPlanItem = () => {
+    setAddPlanItemModalVisible(true);
+  };
+
+  const handleSavePlanItem = (newItem: Omit<DailyPlanItem, 'id' | 'daily_plan_id'>) => {
+    const today = new Date();
+    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    if (editingPlanItem) {
+      // Edit existing item
+      setDailyPlans(prevPlans => 
+        prevPlans.map(plan => ({
+          ...plan,
+          entries: plan.entries.map(entry => 
+            entry.id === editingPlanItem.id 
+              ? { ...entry, ...newItem }
+              : entry
+          )
+        }))
+      );
+      setEditingPlanItem(null);
+    } else {
+      // Add new item
+      setDailyPlans(prevPlans => {
+        const existingPlanIndex = prevPlans.findIndex(plan => plan.date === todayString);
+        const newPlanItem: DailyPlanItem = {
+          ...newItem,
+          id: `plan_item_${Date.now()}`,
+          daily_plan_id: existingPlanIndex >= 0 ? prevPlans[existingPlanIndex].id : `plan_${todayString}`,
+          order: existingPlanIndex >= 0 ? prevPlans[existingPlanIndex].entries.length + 1 : 1,
+        };
+
+        if (existingPlanIndex >= 0) {
+          // Add to existing plan
+          const updatedPlans = [...prevPlans];
+          updatedPlans[existingPlanIndex] = {
+            ...updatedPlans[existingPlanIndex],
+            entries: [...updatedPlans[existingPlanIndex].entries, newPlanItem],
+          };
+          return updatedPlans;
+        } else {
+          // Create new plan
+          const newPlan = {
+            id: `plan_${todayString}`,
+            user_id: 'user_1',
+            date: todayString,
+            entries: [newPlanItem],
+            created_at: new Date().toISOString(),
+          };
+          return [...prevPlans, newPlan];
+        }
+      });
+    }
+  };
+
+  const handleEditPlanItem = (item: DailyPlanItem) => {
+    setEditingPlanItem(item);
+    setAddPlanItemModalVisible(true);
+  };
+
+  const handleDeletePlanItem = (itemId: string) => {
+    setDailyPlans(prevPlans => 
+      prevPlans.map(plan => ({
+        ...plan,
+        entries: plan.entries.filter(entry => entry.id !== itemId)
+      }))
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container as any}>
       <View style={styles.header}>
@@ -141,13 +232,13 @@ export default function HabitsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {showTodaysPlan && (
-          <TodaysPlan 
-            habits={habits}
-            events={events}
-            onToggle={() => setShowTodaysPlan(!showTodaysPlan)}
-          />
-        )}
+        <TodaysPlan 
+          dailyPlan={getTodaysPlan()}
+          onPlanItemToggle={handlePlanItemToggle}
+          onAddPlanItem={handleAddPlanItem}
+          onEditPlanItem={handleEditPlanItem}
+          onDeletePlanItem={handleDeletePlanItem}
+        />
 
         <View style={styles.habitsSection}>
           <View style={styles.sectionHeader}>
@@ -201,6 +292,16 @@ export default function HabitsScreen() {
         visible={addHabitModalVisible}
         onClose={() => setAddHabitModalVisible(false)}
         onSave={handleSaveNewHabit}
+      />
+
+      <AddPlanItemModal
+        visible={addPlanItemModalVisible}
+        item={editingPlanItem || undefined}
+        onClose={() => {
+          setAddPlanItemModalVisible(false);
+          setEditingPlanItem(null);
+        }}
+        onSave={handleSavePlanItem}
       />
     </SafeAreaView>
   );
