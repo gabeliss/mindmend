@@ -10,6 +10,7 @@
   "scripts": {
     "dev:app": "cd app && npm run start",
     "dev:web": "cd website && npm run dev",
+    "dev:convex": "npx convex dev",
     "build:web": "cd website && npm run build",
     "install:all": "npm install && cd app && npm install && cd ../website && npm install"
   },
@@ -20,6 +21,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@types/react-native": "^0.72.8"
+    "@types/react-native": "^0.72.8",
+    "convex": "^1.25.4",
+    "convex-auth": "^0.0.79"
   }
 }
