@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from 'convex/react';
 
 import { Colors, Typography, Spacing, BorderRadius } from '../lib/design-system';
 import { Habit, HabitEvent, DailyPlan, DailyPlanItem } from '../types/habits';
@@ -15,6 +16,7 @@ import AddPlanItemModal from '../components/habits/AddPlanItemModal';
 import { getHabitEventsForHabit } from '../utils/habitUtils';
 
 export default function HabitsScreen() {
+  // TODO: Use Convex queries when API path is resolved
   const [habits, setHabits] = useState<Habit[]>(mockHabits);
   const [events, setEvents] = useState<HabitEvent[]>(mockHabitEvents);
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>(mockDailyPlans);
