@@ -11,6 +11,7 @@ import JournalScreen from './src/screens/JournalScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import CommunityScreen from './src/screens/CommunityScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import { AuthProvider } from './src/components/auth';
 
 import { Colors } from './src/lib/design-system';
 
@@ -18,11 +19,12 @@ const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <NavigationContainer>
-        <StatusBar style="dark" />
-        <Tab.Navigator
+    <AuthProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <NavigationContainer>
+          <StatusBar style="dark" />
+          <Tab.Navigator
           screenOptions={({ route }) => ({
             tabBarIcon: ({ focused, color, size }) => {
               let iconName: keyof typeof Ionicons.glyphMap;
@@ -66,9 +68,10 @@ export default function App() {
           <Tab.Screen name="Chat" component={ChatScreen} />
           <Tab.Screen name="Community" component={CommunityScreen} />
           <Tab.Screen name="Profile" component={ProfileScreen} />
-        </Tab.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
-    </GestureHandlerRootView>
+          </Tab.Navigator>
+        </NavigationContainer>
+      </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </AuthProvider>
   );
 }
