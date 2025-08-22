@@ -6,7 +6,8 @@ import { useQuery } from 'convex/react';
 
 import { Colors, Typography, Spacing, BorderRadius } from '../lib/design-system';
 import { Habit, HabitEvent, DailyPlan, DailyPlanItem } from '../types/habits';
-import { mockHabits, mockHabitEvents, mockDailyPlans } from '../data/mockData';
+import { mockDailyPlans } from '../data/mockData';
+import { api } from '../services/convex';
 import HabitCard from '../components/habits/HabitCard';
 import TodaysPlan from '../components/habits/TodaysPlan';
 import DayDetailModal from '../components/habits/DayDetailModal';
@@ -16,9 +17,12 @@ import AddPlanItemModal from '../components/habits/AddPlanItemModal';
 import { getHabitEventsForHabit } from '../utils/habitUtils';
 
 export default function HabitsScreen() {
-  // TODO: Use Convex queries when API path is resolved
-  const [habits, setHabits] = useState<Habit[]>(mockHabits);
-  const [events, setEvents] = useState<HabitEvent[]>(mockHabitEvents);
+  // Query habits from Convex (authenticated automatically via Clerk)
+  const habitsQuery = useQuery(api.habits.getHabits, { include_archived: false });
+  const habits = habitsQuery || [];
+  
+  // TODO: Connect habit events to Convex later
+  const [events, setEvents] = useState<HabitEvent[]>([]);
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>(mockDailyPlans);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -246,19 +250,30 @@ export default function HabitsScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Your Commitments</Text>
             <Text style={styles.sectionSubtitle}>
-              {habits.length} active habit{habits.length !== 1 ? 's' : ''}
+              {habitsQuery === undefined ? 'Loading...' : `${habits.length} active habit${habits.length !== 1 ? 's' : ''}`}
             </Text>
           </View>
 
-          {habits.map((habit) => (
-            <HabitCard
-              key={habit.id}
-              habit={habit}
-              events={getHabitEventsForHabit(habit.id, events)}
-              onDayPress={handleDayPress}
-              onHabitPress={handleHabitPress}
-            />
-          ))}
+          {habitsQuery === undefined ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading your habits...</Text>
+            </View>
+          ) : habits.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No habits yet!</Text>
+              <Text style={styles.emptySubtext}>Tap the + button above to create your first habit</Text>
+            </View>
+          ) : (
+            habits.map((habit) => (
+              <HabitCard
+                key={habit.id}
+                habit={habit}
+                events={getHabitEventsForHabit(habit.id, events)}
+                onDayPress={handleDayPress}
+                onHabitPress={handleHabitPress}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -357,5 +372,29 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     ...Typography.bodySmall,
     color: Colors.neutral[600],
+  },
+  loadingContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    ...Typography.body,
+    color: Colors.neutral[500],
+  },
+  emptyContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    ...Typography.h3,
+    color: Colors.neutral[600],
+    marginBottom: Spacing.sm,
+  },
+  emptySubtext: {
+    ...Typography.body,
+    color: Colors.neutral[500],
+    textAlign: 'center',
   },
 });

@@ -1,7 +1,8 @@
 import React from 'react';
-import { ClerkProvider } from '@clerk/clerk-expo';
+import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
-import { ConvexProvider, convex } from '../../services/convex';
+import { ConvexProviderWithClerk } from 'convex/react-clerk';
+import { convex } from '../../services/convex';
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -16,9 +17,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ConvexProvider client={convex}>
+      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         {children}
-      </ConvexProvider>
+      </ConvexProviderWithClerk>
     </ClerkProvider>
   );
 }
