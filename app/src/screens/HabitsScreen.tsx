@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from 'convex/react';
@@ -19,7 +19,14 @@ import { getHabitEventsForHabit } from '../utils/habitUtils';
 export default function HabitsScreen() {
   // Query habits from Convex (authenticated automatically via Clerk)
   const habitsQuery = useQuery(api.habits.getHabits, { include_archived: false });
-  const habits = habitsQuery || [];
+  const [habits, setHabits] = useState<Habit[]>([]);
+  
+  // Update local habits when query changes
+  React.useEffect(() => {
+    if (habitsQuery) {
+      setHabits(habitsQuery.sort((a: Habit, b: Habit) => (a.order || 0) - (b.order || 0)));
+    }
+  }, [habitsQuery]);
   
   // TODO: Connect habit events to Convex later
   const [events, setEvents] = useState<HabitEvent[]>([]);
@@ -220,6 +227,15 @@ export default function HabitsScreen() {
     );
   };
 
+  const renderHabitItem = ({ item: habit }: { item: Habit }) => (
+    <HabitCard
+      habit={habit}
+      events={getHabitEventsForHabit(habit.id, events)}
+      onDayPress={handleDayPress}
+      onHabitPress={handleHabitPress}
+    />
+  );
+
   return (
     <SafeAreaView style={styles.container as any}>
       <View style={styles.header}>
@@ -233,49 +249,46 @@ export default function HabitsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <FlatList
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-      >
-        <TodaysPlan 
-          dailyPlan={getTodaysPlan()}
-          onPlanItemToggle={handlePlanItemToggle}
-          onAddPlanItem={handleAddPlanItem}
-          onEditPlanItem={handleEditPlanItem}
-          onDeletePlanItem={handleDeletePlanItem}
-        />
-
-        <View style={styles.habitsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Your Commitments</Text>
-            <Text style={styles.sectionSubtitle}>
-              {habitsQuery === undefined ? 'Loading...' : `${habits.length} active habit${habits.length !== 1 ? 's' : ''}`}
-            </Text>
-          </View>
-
-          {habitsQuery === undefined ? (
+        ListHeaderComponent={() => (
+          <>
+            <TodaysPlan 
+              dailyPlan={getTodaysPlan()}
+              onPlanItemToggle={handlePlanItemToggle}
+              onAddPlanItem={handleAddPlanItem}
+              onEditPlanItem={handleEditPlanItem}
+              onDeletePlanItem={handleDeletePlanItem}
+            />
+            
+            <View style={styles.habitsSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Your Commitments</Text>
+                <Text style={styles.sectionSubtitle}>
+                  {habitsQuery === undefined ? 'Loading...' : `${habits.length} active habit${habits.length !== 1 ? 's' : ''}`}
+                </Text>
+              </View>
+            </View>
+          </>
+        )}
+        data={habits}
+        keyExtractor={(item) => item.id}
+        renderItem={renderHabitItem}
+        ListEmptyComponent={() => 
+          habitsQuery === undefined ? (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading your habits...</Text>
             </View>
-          ) : habits.length === 0 ? (
+          ) : (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No habits yet!</Text>
               <Text style={styles.emptySubtext}>Tap the + button above to create your first habit</Text>
             </View>
-          ) : (
-            habits.map((habit) => (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                events={getHabitEventsForHabit(habit.id, events)}
-                onDayPress={handleDayPress}
-                onHabitPress={handleHabitPress}
-              />
-            ))
-          )}
-        </View>
-      </ScrollView>
+          )
+        }
+      />
 
       {selectedHabit && (
         <DayDetailModal

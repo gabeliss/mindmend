@@ -7,7 +7,7 @@ export default {
       bundleIdentifier: "com.yourcompany.mindmendexpo"
     },
     plugins: [
-      "expo-web-browser",
+      "expo-web-browser", 
       "expo-secure-store"
     ]
   }

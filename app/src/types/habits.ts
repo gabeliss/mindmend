@@ -24,6 +24,7 @@ export interface Habit {
     max_failures: number;
   };
   
+  order?: number; // For drag-and-drop reordering
   created_at: string;
   archived: boolean;
 }
