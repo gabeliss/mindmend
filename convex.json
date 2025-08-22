@@ -1,7 +1,7 @@
 {
-  "functions": "convex/",
-  "generateCommonJSApi": false,
   "node": {
-    "externalPackages": ["@react-native-async-storage/async-storage"]
+    "externalPackages": [
+      "@react-native-async-storage/async-storage"
+    ]
   }
 }

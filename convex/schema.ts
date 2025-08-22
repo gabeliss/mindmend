@@ -1,10 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { authTables } from "convex-auth/server";
 
 export default defineSchema({
-  // Auth tables for Clerk integration
-  ...authTables,
   habits: defineTable({
     user_id: v.string(),
     name: v.string(),

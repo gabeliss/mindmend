@@ -1,6 +1,5 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "convex-auth/server";
 
 // Validation functions for different habit types
 const validateHabitData = (args: any) => {
@@ -105,10 +104,11 @@ export const createHabit = mutation({
   },
   handler: async (ctx, args) => {
     // Get authenticated user ID
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
       throw new Error("Not authenticated");
     }
+    const userId = identity.subject;
 
     // Validate the habit data
     validateHabitData(args);
@@ -250,10 +250,11 @@ export const getHabits = query({
   },
   handler: async (ctx, args) => {
     // Get authenticated user ID
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
       throw new Error("Not authenticated");
     }
+    const userId = identity.subject;
 
     let query = ctx.db
       .query("habits")
