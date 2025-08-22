@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -19,6 +19,8 @@ import { Colors } from './src/lib/design-system';
 const Tab = createBottomTabNavigator();
 
 function AuthenticatedApp() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <NavigationContainer>
       <StatusBar style="dark" />
@@ -50,8 +52,8 @@ function AuthenticatedApp() {
             borderTopColor: Colors.neutral[200],
             borderTopWidth: 1,
             paddingTop: 8,
-            paddingBottom: 8,
-            height: 80,
+            paddingBottom: Math.max(8, insets.bottom),
+            height: 80 + Math.max(0, insets.bottom - 8),
           },
           tabBarLabelStyle: {
             fontSize: 12,
