@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { useQuery, useMutation } from 'convex/react';
 
 import { Colors, Typography, Spacing, BorderRadius } from '../lib/design-system';
@@ -303,14 +304,28 @@ export default function HabitsScreen() {
   };
 
 
-  const renderHabitItem = ({ item: habit }: { item: Habit }) => (
-    <HabitCard
-      habit={habit}
-      events={getHabitEventsForHabit(habit.id, events)}
-      onDayPress={handleDayPress}
-      onHabitPress={handleHabitPress}
-    />
+  const renderHabitItem = ({ item: habit, drag, isActive }: RenderItemParams<Habit>) => (
+    <View
+      style={[
+        styles.habitItemContainer,
+        isActive && styles.activeHabitItem,
+      ]}
+    >
+      <HabitCard
+        habit={habit}
+        events={getHabitEventsForHabit(habit.id, events)}
+        onDayPress={handleDayPress}
+        onHabitPress={handleHabitPress}
+        onLongPress={drag}
+      />
+    </View>
   );
+
+  const handleDragEnd = ({ data }: { data: Habit[] }) => {
+    setHabits(data);
+    // TODO: Update backend with new order when ready to connect
+    console.log('New habit order:', data.map((habit, index) => ({ id: habit.id, order: index })));
+  };
 
   return (
     <SafeAreaView style={styles.container as any}>
@@ -325,11 +340,8 @@ export default function HabitsScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        style={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        ListHeaderComponent={() => (
+      <View style={styles.scrollContainer}>
+        <View style={styles.scrollContent}>
           <View style={styles.habitsSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Your Commitments</Text>
@@ -338,23 +350,27 @@ export default function HabitsScreen() {
               </Text>
             </View>
           </View>
-        )}
-        data={habits}
-        keyExtractor={(item) => item.id}
-        renderItem={renderHabitItem}
-        ListEmptyComponent={() => 
-          habitsQuery === undefined ? (
+          
+          {habitsQuery === undefined ? (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading your habits...</Text>
             </View>
-          ) : (
+          ) : habits.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No habits yet!</Text>
               <Text style={styles.emptySubtext}>Tap the + button above to create your first habit</Text>
             </View>
-          )
-        }
-      />
+          ) : (
+            <DraggableFlatList
+              data={habits}
+              keyExtractor={(item) => item.id}
+              renderItem={renderHabitItem}
+              onDragEnd={handleDragEnd}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </View>
+      </View>
 
       {selectedHabit && (
         <DayDetailModal
@@ -466,5 +482,20 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.neutral[500],
     textAlign: 'center',
+  },
+  habitItemContainer: {
+    marginBottom: Spacing.md,
+  },
+  activeHabitItem: {
+    opacity: 0.8,
+    transform: [{ scale: 1.02 }],
+    shadowColor: Colors.neutral[900],
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });

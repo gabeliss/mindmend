@@ -10,9 +10,10 @@ interface HabitCardProps {
   events: HabitEvent[];
   onDayPress: (date: Date, habit: Habit) => void;
   onHabitPress?: (habit: Habit) => void;
+  onLongPress?: () => void;
 }
 
-export default function HabitCard({ habit, events, onDayPress, onHabitPress }: HabitCardProps) {
+export default function HabitCard({ habit, events, onDayPress, onHabitPress, onLongPress }: HabitCardProps) {
   const getLast7Days = (): Date[] => {
     const days: Date[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -72,6 +73,8 @@ export default function HabitCard({ habit, events, onDayPress, onHabitPress }: H
     <TouchableOpacity
       style={styles.container}
       onPress={() => onHabitPress?.(habit)}
+      onLongPress={onLongPress}
+      delayLongPress={200}
       activeOpacity={0.7}
     >
       <View style={styles.header}>

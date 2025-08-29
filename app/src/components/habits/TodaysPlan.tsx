@@ -445,12 +445,5 @@ const styles = StyleSheet.create({
   completedText: {
     textDecorationLine: 'line-through',
     color: Colors.neutral[500],
-  },
-  swipeHint: {
-    ...Typography.caption,
-    color: Colors.neutral[500],
-    textAlign: 'center',
-    marginTop: Spacing.lg,
-    fontStyle: 'italic',
-  },
+  }
 });
