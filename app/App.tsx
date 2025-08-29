@@ -7,10 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SignedIn, SignedOut } from '@clerk/clerk-expo';
 
+import TodayScreen from './src/screens/TodayScreen';
 import HabitsScreen from './src/screens/HabitsScreen';
 import JournalScreen from './src/screens/JournalScreen';
 import ChatScreen from './src/screens/ChatScreen';
-import CommunityScreen from './src/screens/CommunityScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import { AuthProvider } from './src/components/auth';
 
@@ -25,6 +25,7 @@ function AuthenticatedApp() {
     <NavigationContainer>
       <StatusBar style="dark" />
       <Tab.Navigator
+        initialRouteName="Today"
         screenOptions={({ route }) => ({
           tabBarIcon: ({ focused, color, size }) => {
             let iconName: keyof typeof Ionicons.glyphMap;
@@ -35,8 +36,8 @@ function AuthenticatedApp() {
               iconName = focused ? 'book' : 'book-outline';
             } else if (route.name === 'Chat') {
               iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-            } else if (route.name === 'Community') {
-              iconName = focused ? 'people' : 'people-outline';
+            } else if (route.name === 'Today') {
+              iconName = focused ? 'today' : 'today-outline';
             } else if (route.name === 'Profile') {
               iconName = focused ? 'person' : 'person-outline';
             } else {
@@ -63,10 +64,10 @@ function AuthenticatedApp() {
           headerShown: false,
         })}
       >
+        <Tab.Screen name="Today" component={TodayScreen} />
         <Tab.Screen name="Habits" component={HabitsScreen} />
         <Tab.Screen name="Journal" component={JournalScreen} />
         <Tab.Screen name="Chat" component={ChatScreen} />
-        <Tab.Screen name="Community" component={CommunityScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
     </NavigationContainer>
