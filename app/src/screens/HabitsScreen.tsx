@@ -384,6 +384,7 @@ export default function HabitsScreen() {
               renderItem={renderHabitItem}
               onDragEnd={handleDragEnd}
               showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.flatListContent}
             />
           )}
         </View>
@@ -514,5 +515,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 8,
+  },
+  flatListContent: {
+    paddingBottom: 100, // Extra padding to ensure last item clears the tab bar
   },
 });
