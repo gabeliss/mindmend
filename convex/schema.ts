@@ -42,11 +42,13 @@ export default defineSchema({
       max_failures: v.number(),
     })),
     
+    order: v.optional(v.number()),
     archived: v.boolean(),
     created_at: v.string(),
   })
     .index("by_user", ["user_id"])
-    .index("by_user_active", ["user_id", "archived"]),
+    .index("by_user_active", ["user_id", "archived"])
+    .index("by_user_order", ["user_id", "order"]),
 
   habit_events: defineTable({
     habit_id: v.id("habits"),

@@ -113,6 +113,18 @@ export const createHabit = mutation({
     // Validate the habit data
     validateHabitData(args);
 
+    // Get the next order number for this user
+    const existingHabits = await ctx.db
+      .query("habits")
+      .withIndex("by_user", q => q.eq("user_id", userId))
+      .filter(q => q.eq(q.field("archived"), false))
+      .collect();
+    
+    const maxOrder = existingHabits.reduce((max, habit) => 
+      Math.max(max, habit.order || 0), 0
+    );
+    const nextOrder = maxOrder + 1;
+
     const now = new Date().toISOString();
     
     const habitId = await ctx.db.insert("habits", {
@@ -126,6 +138,7 @@ export const createHabit = mutation({
       goal_time: args.goal_time,
       goal_times_by_day: args.goal_times_by_day,
       failure_tolerance: args.failure_tolerance,
+      order: nextOrder,
       archived: false,
       created_at: now,
     });
@@ -169,6 +182,7 @@ export const updateHabit = mutation({
       window: v.union(v.literal("weekly"), v.literal("monthly")),
       max_failures: v.number(),
     })),
+    order: v.optional(v.number()),
     archived: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -266,6 +280,9 @@ export const getHabits = query({
 
     const habits = await query.collect();
     
+    // Sort by order field, with fallback for habits without order
+    habits.sort((a, b) => (a.order || 999) - (b.order || 999));
+    
     return habits.map(habit => ({
       id: habit._id,
       user_id: habit.user_id,
@@ -278,6 +295,7 @@ export const getHabits = query({
       goal_time: habit.goal_time,
       goal_times_by_day: habit.goal_times_by_day,
       failure_tolerance: habit.failure_tolerance,
+      order: habit.order,
       archived: habit.archived,
       created_at: habit.created_at,
     }));
@@ -310,8 +328,44 @@ export const getHabit = query({
       goal_time: habit.goal_time,
       goal_times_by_day: habit.goal_times_by_day,
       failure_tolerance: habit.failure_tolerance,
+      order: habit.order,
       archived: habit.archived,
       created_at: habit.created_at,
     };
   },
 });
+
+// Bulk reorder mutation for drag-and-drop functionality
+export const updateHabitsOrder = mutation({
+  args: {
+    habitOrders: v.array(v.object({
+      id: v.id("habits"),
+      order: v.number(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    // Get authenticated user ID
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const userId = identity.subject;
+
+    // Verify all habits belong to the user and update their orders
+    for (const { id, order } of args.habitOrders) {
+      const habit = await ctx.db.get(id);
+      if (!habit) {
+        throw new Error(`Habit not found: ${id}`);
+      }
+      if (habit.user_id !== userId) {
+        throw new Error(`Unauthorized to update habit: ${id}`);
+      }
+      
+      // Update the habit's order
+      await ctx.db.patch(id, { order });
+    }
+
+    return { success: true, updated: args.habitOrders.length };
+  },
+});
+

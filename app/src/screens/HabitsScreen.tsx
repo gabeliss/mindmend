@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView, SafeAreaViewProps } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { useQuery, useMutation } from 'convex/react';
@@ -32,6 +32,7 @@ export default function HabitsScreen() {
   // Convex mutations for habits
   const createHabit = useMutation(api.habits.createHabit);
   const updateHabit = useMutation(api.habits.updateHabit);
+  const updateHabitsOrder = useMutation(api.habits.updateHabitsOrder);
   const deleteHabit = useMutation(api.habits.deleteHabit);
   
   // Convex mutations for habit events
@@ -42,7 +43,8 @@ export default function HabitsScreen() {
   // Update local habits when query changes
   React.useEffect(() => {
     if (habitsQuery) {
-      setHabits(habitsQuery.sort((a: Habit, b: Habit) => (a.order || 0) - (b.order || 0)));
+      // Backend now returns habits sorted by order, no need to sort again
+      setHabits(habitsQuery);
     }
   }, [habitsQuery]);
   
@@ -321,14 +323,29 @@ export default function HabitsScreen() {
     </View>
   );
 
-  const handleDragEnd = ({ data }: { data: Habit[] }) => {
+  const handleDragEnd = async ({ data }: { data: Habit[] }) => {
+    // Update local state immediately for smooth UX
     setHabits(data);
-    // TODO: Update backend with new order when ready to connect
-    console.log('New habit order:', data.map((habit, index) => ({ id: habit.id, order: index })));
+    
+    // Prepare the order updates for the backend
+    const habitOrders = data.map((habit, index) => ({
+      id: habit.id as any, // Convex ID type
+      order: index + 1, // Start order from 1
+    }));
+
+    try {
+      // Persist the new order to the backend
+      await updateHabitsOrder({ habitOrders });
+      console.log('Successfully updated habit order in backend');
+    } catch (error) {
+      console.error('Failed to update habit order:', error);
+      // Optionally revert local state if backend update fails
+      // You could re-fetch habits here to restore the original order
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container as any}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Habits</Text>
         <TouchableOpacity 

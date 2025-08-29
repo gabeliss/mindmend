@@ -10,6 +10,7 @@ export const api = {
     getHabits: "habits:getHabits" as any,
     createHabit: "habits:createHabit" as any,
     updateHabit: "habits:updateHabit" as any,
+    updateHabitsOrder: "habits:updateHabitsOrder" as any,
     deleteHabit: "habits:deleteHabit" as any,
     getHabit: "habits:getHabit" as any,
   },

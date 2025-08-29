@@ -18,6 +18,7 @@ import { Colors, Typography, Spacing, BorderRadius } from '../lib/design-system'
 import { Habit, HabitEvent } from '../types/habits';
 import DayDetailModal from '../components/habits/DayDetailModal';
 import DayCircle from '../components/habits/DayCircle';
+import TimePickerInput from '../components/shared/TimePickerInput';
 import { getHabitGoalText } from '../utils/habitGoalUtils';
 
 interface HabitDetailScreenProps {
@@ -57,11 +58,21 @@ export default function HabitDetailScreen({
   const [dayModalVisible, setDayModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [habitNote, setHabitNote] = useState('');
+  const [goalTimeDate, setGoalTimeDate] = useState(new Date());
 
   useEffect(() => {
     if (habit) {
       setEditedHabit({ ...habit });
       setHabitNote(''); // TODO: Get from habit model when we add notes field
+      
+      // Parse goal_time if it exists for schedule habits
+      if (habit.type === 'schedule' && habit.goal_time) {
+        const timeString = habit.goal_time;
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        setGoalTimeDate(date);
+      }
     }
   }, [habit]);
 
@@ -205,7 +216,7 @@ export default function HabitDetailScreen({
     }
 
     // Validate required fields based on habit type
-    if (editedHabit.type === 'quantity' || editedHabit.type === 'duration' || editedHabit.type === 'schedule') {
+    if (editedHabit.type === 'quantity' || editedHabit.type === 'duration') {
       if (!editedHabit.goal_value || editedHabit.goal_value <= 0) {
         Alert.alert('Error', 'Please enter a valid goal value.');
         return;
@@ -468,13 +479,44 @@ export default function HabitDetailScreen({
           </Text>
         </View>
 
-        {/* Goal value for non-simple habits */}
-        {editedHabit.type !== 'simple' && editedHabit.type !== 'avoidance' && renderEditableField(
-          editedHabit.type === 'schedule' ? 'Goal Time (minutes)' : 'Goal Value',
+        {/* Goal value for quantity and duration habits */}
+        {(editedHabit.type === 'quantity' || editedHabit.type === 'duration') && renderEditableField(
+          'Goal Value',
           editedHabit.goal_value?.toString() || '',
           (text) => handleFieldChange('goal_value', parseFloat(text) || 0),
-          editedHabit.type === 'schedule' ? '30' : '10',
+          '10',
           'numeric'
+        )}
+
+        {/* Goal time for schedule habits */}
+        {editedHabit.type === 'schedule' && (
+          <View style={styles.editField}>
+            <Text style={styles.editFieldLabel}>Goal Time</Text>
+            {isEditMode ? (
+              <TimePickerInput
+                value={goalTimeDate}
+                onChange={(time) => {
+                  setGoalTimeDate(time);
+                  const hours = time.getHours();
+                  const minutes = time.getMinutes();
+                  const timeString = `${hours}:${minutes.toString().padStart(2, '0')}`;
+                  handleFieldChange('goal_time', timeString);
+                }}
+                placeholder="Select target time"
+              />
+            ) : (
+              <Text style={styles.editFieldValue}>
+                {editedHabit.goal_time ? (() => {
+                  const [hours, minutes] = editedHabit.goal_time.split(':').map(Number);
+                  const date = new Date();
+                  date.setHours(hours, minutes, 0, 0);
+                  const displayHours = date.getHours() % 12 === 0 ? 12 : date.getHours() % 12;
+                  const period = date.getHours() >= 12 ? 'PM' : 'AM';
+                  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+                })() : 'Select target time'}
+              </Text>
+            )}
+          </View>
         )}
 
         {/* Unit for quantity/duration */}

@@ -10,8 +10,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Typography, Spacing, BorderRadius } from '../../lib/design-system';
@@ -594,57 +595,61 @@ export default function AddHabitModal({ visible, onClose, onSave }: AddHabitModa
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
     >
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <SafeAreaView style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-              <Ionicons name="close" size={24} color={Colors.neutral[600]} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Add New Habit</Text>
-            <View style={styles.headerSpacer} />
-          </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+            <Ionicons name="close" size={24} color={Colors.neutral[600]} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Add New Habit</Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${(step / totalSteps) * 100}%` }]} />
-            </View>
-            <Text style={styles.progressText}>Step {step} of {totalSteps}</Text>
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${(step / totalSteps) * 100}%` }]} />
           </View>
+          <Text style={styles.progressText}>Step {step} of {totalSteps}</Text>
+        </View>
 
-          <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.keyboardAvoidingContainer}>
+          <ScrollView 
+            style={styles.content} 
+            contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             {step === 1 && renderHabitTypeSelection()}
             {step === 2 && renderHabitDetails()}
             {step === 3 && renderFrequencySelection()}
           </ScrollView>
 
-          <View style={styles.footer}>
-            {step > 1 && (
-              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-            )}
-            
-            {step < totalSteps ? (
-              <TouchableOpacity 
-                style={[styles.nextButton, (!selectedType && step === 1) && styles.nextButtonDisabled]} 
-                onPress={handleNext}
-                disabled={!selectedType && step === 1}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                <Text style={styles.saveButtonText}>Create Habit</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </SafeAreaView>
-      </KeyboardAvoidingView>
+          <SafeAreaViewContext edges={['bottom']}>
+            <View style={styles.footer}>
+              {step > 1 && (
+                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                  <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+              )}
+              
+              {step < totalSteps ? (
+                <TouchableOpacity 
+                  style={[styles.nextButton, (!selectedType && step === 1) && styles.nextButtonDisabled]} 
+                  onPress={handleNext}
+                  disabled={!selectedType && step === 1}
+                >
+                  <Text style={styles.nextButtonText}>Next</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                  <Text style={styles.saveButtonText}>Create Habit</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </SafeAreaViewContext>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -676,7 +681,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingTop: Spacing.md,
   },
   progressBar: {
     height: 4,
@@ -694,8 +699,14 @@ const styles = StyleSheet.create({
     color: Colors.neutral[600],
     textAlign: 'center',
   },
+  keyboardAvoidingContainer: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: Spacing.xl,
   },
   stepContainer: {
     padding: Spacing.lg,
@@ -730,7 +741,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   typeTitle: {
-    ...Typography.h4,
+    ...Typography.h3,
     color: Colors.neutral[800],
     marginBottom: Spacing.xs,
   },
@@ -855,8 +866,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
+    paddingRight: Spacing.lg,
+    paddingTop: Spacing.md,
     backgroundColor: Colors.neutral[50],
     borderTopWidth: 1,
     borderTopColor: Colors.neutral[200],
