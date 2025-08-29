@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 
 import { Colors, Typography, Spacing, BorderRadius } from '../lib/design-system';
 import { Habit, HabitEvent, DailyPlan, DailyPlanItem } from '../types/habits';
@@ -15,11 +15,31 @@ import HabitDetailScreen from './HabitDetailScreen';
 import AddHabitModal from '../components/habits/AddHabitModal';
 import AddPlanItemModal from '../components/habits/AddPlanItemModal';
 import { getHabitEventsForHabit } from '../utils/habitUtils';
+import { useAuth } from '../hooks/useAuth';
 
 export default function HabitsScreen() {
+  // Auth hook
+  const { userId, isAuthenticated } = useAuth();
+  
   // Query habits from Convex (authenticated automatically via Clerk)
   const habitsQuery = useQuery(api.habits.getHabits, { include_archived: false });
   const [habits, setHabits] = useState<Habit[]>([]);
+  
+  // Query habit events from Convex
+  const eventsQuery = useQuery(
+    api.habitEvents.getHabitEvents, 
+    userId ? { user_id: userId } : 'skip'
+  );
+  
+  // Convex mutations for habits
+  const createHabit = useMutation(api.habits.createHabit);
+  const updateHabit = useMutation(api.habits.updateHabit);
+  const deleteHabit = useMutation(api.habits.deleteHabit);
+  
+  // Convex mutations for habit events
+  const createHabitEvent = useMutation(api.habitEvents.createHabitEvent);
+  const updateHabitEvent = useMutation(api.habitEvents.updateHabitEvent);
+  const deleteHabitEvent = useMutation(api.habitEvents.deleteHabitEvent);
   
   // Update local habits when query changes
   React.useEffect(() => {
@@ -28,8 +48,15 @@ export default function HabitsScreen() {
     }
   }, [habitsQuery]);
   
-  // TODO: Connect habit events to Convex later
+  // Local state for habit events (synced with Convex)
   const [events, setEvents] = useState<HabitEvent[]>([]);
+  
+  // Update local events when query changes
+  React.useEffect(() => {
+    if (eventsQuery) {
+      setEvents(eventsQuery);
+    }
+  }, [eventsQuery]);
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>(mockDailyPlans);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -46,38 +73,104 @@ export default function HabitsScreen() {
     setModalVisible(true);
   };
 
-  const handleModalSave = (updatedEvent: Partial<HabitEvent>) => {
-    setEvents(prevEvents => {
-      const existingEventIndex = prevEvents.findIndex(
-        e => e.id === updatedEvent.id
-      );
+  const handleModalSave = async (updatedEvent: Partial<HabitEvent>) => {
+    if (!userId || !isAuthenticated) {
+      console.error('User not authenticated');
+      return;
+    }
 
-      if (existingEventIndex >= 0) {
-        // Update existing event
-        const newEvents = [...prevEvents];
-        newEvents[existingEventIndex] = { ...newEvents[existingEventIndex], ...updatedEvent };
-        return newEvents;
+    console.log('Saving habit event:', updatedEvent);
+
+    try {
+      if (updatedEvent.id && !updatedEvent.id.startsWith('event_') && !updatedEvent.id.startsWith('avoided_') && !updatedEvent.id.startsWith('skipped_') && !updatedEvent.id.startsWith('relapse_')) {
+        // Update existing event (has a real Convex ID)
+        const updateData: any = {
+          id: updatedEvent.id as any, // Convex ID
+          user_id: userId,
+        };
+        
+        if (updatedEvent.status !== undefined) updateData.status = updatedEvent.status;
+        if (updatedEvent.value !== undefined) updateData.value = updatedEvent.value;
+        if (updatedEvent.note !== undefined) updateData.note = updatedEvent.note;
+        if (updatedEvent.timestamp !== undefined) updateData.timestamp = updatedEvent.timestamp;
+
+        console.log('Updating event with:', updateData);
+        await updateHabitEvent(updateData);
       } else {
         // Create new event
-        const newEvent: HabitEvent = {
-          id: updatedEvent.id || `event_${Date.now()}`,
-          habit_id: updatedEvent.habit_id!,
-          user_id: updatedEvent.user_id!,
-          date: updatedEvent.date!,
-          status: updatedEvent.status!,
-          value: updatedEvent.value,
-          note: updatedEvent.note,
-          timestamp: updatedEvent.timestamp,
-          created_at: updatedEvent.created_at!,
-          updated_at: updatedEvent.updated_at!,
+        if (!updatedEvent.habit_id || !updatedEvent.date || !updatedEvent.status) {
+          console.error('Missing required fields for creating habit event:', updatedEvent);
+          return;
+        }
+
+        const createData: any = {
+          habit_id: updatedEvent.habit_id as any, // Convex ID
+          user_id: userId,
+          date: updatedEvent.date,
+          status: updatedEvent.status,
         };
-        return [...prevEvents, newEvent];
+
+        if (updatedEvent.value !== undefined) createData.value = updatedEvent.value;
+        if (updatedEvent.note !== undefined) createData.note = updatedEvent.note;
+        if (updatedEvent.timestamp !== undefined) createData.timestamp = updatedEvent.timestamp;
+
+        console.log('Creating event with:', createData);
+        await createHabitEvent(createData);
       }
-    });
+
+      // Update local state for immediate UI feedback
+      setEvents(prevEvents => {
+        const existingEventIndex = prevEvents.findIndex(
+          e => e.id === updatedEvent.id
+        );
+
+        if (existingEventIndex >= 0) {
+          // Update existing event
+          const newEvents = [...prevEvents];
+          newEvents[existingEventIndex] = { ...newEvents[existingEventIndex], ...updatedEvent };
+          return newEvents;
+        } else {
+          // Create new event
+          const newEvent: HabitEvent = {
+            id: updatedEvent.id || `event_${Date.now()}`,
+            habit_id: updatedEvent.habit_id!,
+            user_id: updatedEvent.user_id!,
+            date: updatedEvent.date!,
+            status: updatedEvent.status!,
+            value: updatedEvent.value,
+            note: updatedEvent.note,
+            timestamp: updatedEvent.timestamp,
+            created_at: updatedEvent.created_at!,
+            updated_at: updatedEvent.updated_at!,
+          };
+          return [...prevEvents, newEvent];
+        }
+      });
+    } catch (error) {
+      console.error('Failed to save habit event:', error);
+    }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
-    setEvents(prevEvents => prevEvents.filter(e => e.id !== eventId));
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!userId || !isAuthenticated) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    try {
+      if (!eventId.startsWith('event_') && !eventId.startsWith('avoided_') && !eventId.startsWith('skipped_') && !eventId.startsWith('relapse_')) {
+        // Delete from Convex if it's a real Convex ID
+        await deleteHabitEvent({
+          id: eventId as any, // Convex ID
+          user_id: userId,
+        });
+      }
+
+      // Update local state
+      setEvents(prevEvents => prevEvents.filter(e => e.id !== eventId));
+    } catch (error) {
+      console.error('Failed to delete habit event:', error);
+    }
   };
 
   const getSelectedEvent = (): HabitEvent | undefined => {
@@ -96,15 +189,21 @@ export default function HabitsScreen() {
     setAddHabitModalVisible(true);
   };
 
-  const handleSaveNewHabit = (newHabit: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'archived'>) => {
-    const habit: Habit = {
-      ...newHabit,
-      id: `habit_${Date.now()}`,
-      user_id: 'user_1', // TODO: Get from auth context
-      created_at: new Date().toISOString(),
-      archived: false,
-    };
-    setHabits(prevHabits => [...prevHabits, habit]);
+  const handleSaveNewHabit = async (newHabit: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'archived'>) => {
+    if (!userId || !isAuthenticated) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    try {
+      await createHabit({
+        ...newHabit,
+      });
+
+      // Local state will update via the habits query
+    } catch (error) {
+      console.error('Failed to create habit:', error);
+    }
   };
 
   const handleHabitPress = (habit: Habit) => {
@@ -112,31 +211,101 @@ export default function HabitsScreen() {
     setHabitDetailVisible(true);
   };
 
-  const handleSaveHabit = (updatedHabit: Partial<Habit>) => {
-    setHabits(prevHabits => 
-      prevHabits.map(h => 
-        h.id === updatedHabit.id ? { ...h, ...updatedHabit } : h
-      )
-    );
+  const handleSaveHabit = async (updatedHabit: Partial<Habit>) => {
+    if (!userId || !isAuthenticated || !updatedHabit.id) {
+      console.error('User not authenticated or missing habit ID');
+      return;
+    }
+
+    try {
+      // Only pass defined fields that the mutation expects
+      const updateData: any = {
+        id: updatedHabit.id as any, // Convex ID
+        user_id: userId,
+      };
+
+      // Add optional fields if they're defined
+      if (updatedHabit.name !== undefined) updateData.name = updatedHabit.name;
+      if (updatedHabit.type !== undefined) updateData.type = updatedHabit.type;
+      if (updatedHabit.frequency !== undefined) updateData.frequency = updatedHabit.frequency;
+      if (updatedHabit.goal_value !== undefined) updateData.goal_value = updatedHabit.goal_value;
+      if (updatedHabit.goal_direction !== undefined) updateData.goal_direction = updatedHabit.goal_direction;
+      if (updatedHabit.unit !== undefined) updateData.unit = updatedHabit.unit;
+      if (updatedHabit.goal_time !== undefined) updateData.goal_time = updatedHabit.goal_time;
+      if (updatedHabit.goal_times_by_day !== undefined) updateData.goal_times_by_day = updatedHabit.goal_times_by_day;
+      if (updatedHabit.failure_tolerance !== undefined) updateData.failure_tolerance = updatedHabit.failure_tolerance;
+      if (updatedHabit.archived !== undefined) updateData.archived = updatedHabit.archived;
+
+      await updateHabit(updateData);
+
+      // Local state will update via the habits query
+    } catch (error) {
+      console.error('Failed to update habit:', error);
+    }
   };
 
-  const handleArchiveHabit = (habitId: string) => {
-    setHabits(prevHabits => 
-      prevHabits.map(h => 
-        h.id === habitId ? { ...h, archived: true } : h
-      )
-    );
+  const handleArchiveHabit = async (habitId: string) => {
+    if (!userId || !isAuthenticated) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    try {
+      await updateHabit({
+        id: habitId as any, // Convex ID
+        user_id: userId,
+        archived: true,
+      });
+
+      // Local state will update via the habits query
+    } catch (error) {
+      console.error('Failed to archive habit:', error);
+    }
   };
 
-  const handleDeleteHabit = (habitId: string) => {
-    setHabits(prevHabits => prevHabits.filter(h => h.id !== habitId));
-    // Also remove all events for this habit
-    setEvents(prevEvents => prevEvents.filter(e => e.habit_id !== habitId));
+  const handleDeleteHabit = async (habitId: string) => {
+    if (!userId || !isAuthenticated) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    try {
+      await deleteHabit({
+        id: habitId as any, // Convex ID
+        user_id: userId,
+      });
+
+      // Local state will update via the habits query
+      // Events will be cleaned up by the database schema or backend logic
+    } catch (error) {
+      console.error('Failed to delete habit:', error);
+    }
   };
 
-  const handleResetHabit = (habitId: string) => {
-    // Remove all events for this habit to reset progress
-    setEvents(prevEvents => prevEvents.filter(e => e.habit_id !== habitId));
+  const handleResetHabit = async (habitId: string) => {
+    if (!userId || !isAuthenticated) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    try {
+      // Get all events for this habit and delete them
+      const habitEvents = events.filter(e => e.habit_id === habitId);
+      
+      for (const event of habitEvents) {
+        if (!event.id.startsWith('event_') && !event.id.startsWith('avoided_') && !event.id.startsWith('skipped_') && !event.id.startsWith('relapse_')) {
+          // Delete from Convex if it's a real Convex ID
+          await deleteHabitEvent({
+            id: event.id as any, // Convex ID
+            user_id: userId,
+          });
+        }
+      }
+
+      // Local state will update via the events query
+    } catch (error) {
+      console.error('Failed to reset habit:', error);
+    }
   };
 
   const getTodaysPlan = (): DailyPlan | undefined => {

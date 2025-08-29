@@ -26,17 +26,32 @@ npm run install:all
 
 ### Development
 
-Start the mobile app:
+#### Daily Development Workflow
+
+Start the mobile app for local development:
 
 ```bash
 npm run dev:app
 ```
+
+This starts Expo development server with QR code - scan with Expo Go app on your phone for instant testing during development.
 
 Start the web application:
 
 ```bash
 npm run dev:web
 ```
+
+#### Publishing Updates to Expo
+
+When you want to push updates to users who have your app installed:
+
+```bash
+cd app
+eas update --branch dev --message "your update message"
+```
+
+This publishes over-the-air updates that users will receive automatically.
 
 ### Building
 

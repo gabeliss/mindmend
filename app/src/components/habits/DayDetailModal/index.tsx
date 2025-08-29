@@ -252,9 +252,12 @@ export default function DayDetailModal({
       parsedValue = parseTimeValue(timeValue, habit);
     }
     
+    // Only require values for quantity, duration, and schedule habits
     if (status !== 'skipped' && status !== 'not_logged' && parsedValue === undefined) {
-      Alert.alert('Missing Value', 'Please enter a time or value for this day.');
-      return;
+      if (habit.type === 'quantity' || habit.type === 'duration' || habit.type === 'schedule') {
+        Alert.alert('Missing Value', 'Please enter a time or value for this day.');
+        return;
+      }
     }
 
     // Use local timezone date string to avoid timezone issues
