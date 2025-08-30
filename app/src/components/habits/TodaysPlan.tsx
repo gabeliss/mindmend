@@ -12,16 +12,45 @@ interface TodaysPlanProps {
   onSmartAddPlanItem: (description: string, time?: string) => void;
   onEditPlanItem: (description: string, time?: string, itemId: string) => void;
   onDeletePlanItem: (itemId: string) => void;
+  mode: 'today' | 'tomorrow';
+  onMoveUnfinishedToTomorrow?: () => void;
+  onCopyFromToday?: () => void;
 }
 
-export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlanItem, onEditPlanItem, onDeletePlanItem }: TodaysPlanProps) {
+export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlanItem, onEditPlanItem, onDeletePlanItem, mode, onMoveUnfinishedToTomorrow, onCopyFromToday }: TodaysPlanProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [inputValue, setInputValue] = useState('');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const inputRef = useRef<TextInput | null>(null);
   const editRef = useRef<TextInput | null>(null);
-  const today = new Date();
+  
+  const currentDate = mode === 'today' ? new Date() : new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const isToday = mode === 'today';
+  
+  // Time-aware suggestions
+  const getTimeAwareSuggestions = () => {
+    const hour = new Date().getHours();
+    
+    if (mode === 'today') {
+      if (hour < 12) {
+        return ["9am workout", "morning meditation", "healthy breakfast"];
+      } else if (hour < 17) {
+        return ["lunch break", "afternoon walk", "2:30pm meeting"];
+      } else {
+        return ["evening reading", "call family", "prep for tomorrow"];
+      }
+    } else {
+      // Tomorrow suggestions
+      if (hour >= 18) {
+        return ["9am workout tomorrow", "morning priorities", "tomorrow's meetings"];
+      } else {
+        return ["tomorrow's workout", "morning routine", "important calls"];
+      }
+    }
+  };
+  
+  const suggestions = getTimeAwareSuggestions();
   
   // Get plan items sorted by order, then separate by time vs no-time
   const sortedItems = dailyPlan?.entries.sort((a, b) => a.order - b.order) || [];
@@ -30,6 +59,7 @@ export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlan
   
   const completedCount = sortedItems.filter(item => item.completed).length;
   const totalCount = sortedItems.length;
+  const unfinishedCount = totalCount - completedCount;
 
   const getStatusIcon = (completed: boolean) => {
     return completed 
@@ -115,9 +145,15 @@ export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlan
     
     return (
       <View key={item.id} style={styles.planItem}>
-        <TouchableOpacity onPress={() => onPlanItemToggle(item.id)}>
-          {getStatusIcon(item.completed)}
-        </TouchableOpacity>
+        {isToday ? (
+          <TouchableOpacity onPress={() => onPlanItemToggle(item.id)}>
+            {getStatusIcon(item.completed)}
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.planIndicator}>
+            <Ionicons name="ellipse-outline" size={20} color={Colors.neutral[300]} />
+          </View>
+        )}
         <View style={styles.planItemContent}>
           {isEditing ? (
             <TextInput
@@ -174,8 +210,10 @@ export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlan
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.titleSection}>
-          <Text style={styles.title}>Today's Plan</Text>
-          <Text style={styles.date}>{formatDate(today)}</Text>
+          <Text style={styles.title}>
+            {mode === 'today' ? "Today's Plan" : "Tomorrow's Plan"}
+          </Text>
+          <Text style={styles.date}>{formatDate(currentDate)}</Text>
         </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} style={styles.toggleButton}>
@@ -210,30 +248,67 @@ export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlan
             )}
           </View>
 
-          <View style={styles.progressSection}>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${totalCount ? (completedCount / totalCount) * 100 : 0}%` }
-                ]} 
-              />
+          {isToday && (
+            <View style={styles.progressSection}>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${totalCount ? (completedCount / totalCount) * 100 : 0}%` }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.progressText}>
+                {completedCount} of {totalCount} {totalCount === 1 ? 'task' : 'tasks'} completed
+              </Text>
             </View>
-            <Text style={styles.progressText}>
-              {completedCount} of {totalCount} {totalCount === 1 ? 'task' : 'tasks'} completed
-            </Text>
-          </View>
+          )}
+
+          {/* Move Unfinished Tasks to Tomorrow Button */}
+          {isToday && unfinishedCount > 0 && onMoveUnfinishedToTomorrow && (
+            <TouchableOpacity 
+              style={styles.moveTasksButton}
+              onPress={onMoveUnfinishedToTomorrow}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-forward-circle-outline" size={20} color={Colors.primary[600]} />
+              <Text style={styles.moveTasksButtonText}>
+                Move {unfinishedCount} unfinished {unfinishedCount === 1 ? 'task' : 'tasks'} to tomorrow
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Copy from Today Button for Tomorrow */}
+          {!isToday && onCopyFromToday && (
+            <TouchableOpacity 
+              style={styles.copyFromTodayButton}
+              onPress={onCopyFromToday}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="copy-outline" size={20} color={Colors.secondary[600]} />
+              <Text style={styles.copyFromTodayButtonText}>
+                Copy from today's plan
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {totalCount === 0 ? (
             <View style={styles.emptyState}>
+              <View style={styles.emptyStateIcon}>
+                <Ionicons 
+                  name={mode === 'today' ? "calendar-outline" : "moon-outline"} 
+                  size={48} 
+                  color={Colors.neutral[300]} 
+                />
+              </View>
               <Text style={styles.emptyStateText}>
-                No plan set for today
+                {mode === 'today' ? 'No plan set for today' : 'No plan set for tomorrow'}
               </Text>
               <View style={styles.hintContainer}>
                 <Text style={styles.hintText}>💡 Try typing above:</Text>
-                <Text style={styles.hintExample}>"9am workout"</Text>
-                <Text style={styles.hintExample}>"call mom"</Text>
-                <Text style={styles.hintExample}>"2:30pm team meeting"</Text>
+                {suggestions.map((suggestion, index) => (
+                  <Text key={index} style={styles.hintExample}>"{suggestion}"</Text>
+                ))}
               </View>
             </View>
           ) : (
@@ -348,6 +423,46 @@ const styles = StyleSheet.create({
     color: Colors.neutral[600],
     textAlign: 'center',
   },
+  moveTasksButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary[50],
+    borderWidth: 1,
+    borderColor: Colors.primary[200],
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  moveTasksButtonText: {
+    ...Typography.bodySmall,
+    color: Colors.primary[600],
+    fontWeight: '500',
+    marginLeft: Spacing.xs,
+  },
+  copyFromTodayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.secondary[50],
+    borderWidth: 1,
+    borderColor: Colors.secondary[200],
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  copyFromTodayButtonText: {
+    ...Typography.bodySmall,
+    color: Colors.secondary[600],
+    fontWeight: '500',
+    marginLeft: Spacing.xs,
+  },
+  emptyStateIcon: {
+    marginBottom: Spacing.md,
+    alignItems: 'center',
+  },
   emptyState: {
     paddingVertical: Spacing.xl,
     alignItems: 'center',
@@ -407,6 +522,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xs,
     borderRadius: BorderRadius.sm,
     backgroundColor: Colors.neutral[50],
+  },
+  planIndicator: {
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   planItemTextContainer: {
     flex: 1,
