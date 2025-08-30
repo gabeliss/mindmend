@@ -4,8 +4,6 @@ export interface JournalEntry {
   date: string;
   title: string;
   content: string;
-  mood?: 'great' | 'good' | 'okay' | 'poor' | 'terrible';
-  tags?: string[];
   created_at: string;
   updated_at: string;
 }

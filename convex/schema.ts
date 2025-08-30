@@ -89,4 +89,16 @@ export default defineSchema({
   })
     .index("by_plan", ["daily_plan_id"])
     .index("by_plan_order", ["daily_plan_id", "order"]),
+
+  journal_entries: defineTable({
+    user_id: v.string(),
+    date: v.string(), // YYYY-MM-DD format
+    title: v.string(),
+    content: v.string(),
+    created_at: v.string(),
+    updated_at: v.string(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "date"])
+    .index("by_date", ["date"]),
 });

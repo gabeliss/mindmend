@@ -4,9 +4,11 @@ import { ScrollView } from 'react-native';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation } from 'convex/react';
 import { Colors, Typography, Spacing, BorderRadius } from '../lib/design-system';
 import { JournalEntry, JournalGroup } from '../types/journal';
-import { mockJournalEntries } from '../data/mockJournalData';
+import { useAuth } from '../hooks/useAuth';
+import { api } from '../../convex/_generated/api';
 
 // Helper function
 function formatDate(dateString: string) {
@@ -26,9 +28,20 @@ function formatDate(dateString: string) {
 
 
 export default function JournalScreen() {
-  const [entries, setEntries] = useState<JournalEntry[]>(mockJournalEntries || []);
+  const { userId, isAuthenticated } = useAuth();
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+
+  // Query journal entries from Convex
+  const entries = useQuery(
+    api.journalEntries.getJournalEntries,
+    isAuthenticated && userId ? { userId } : "skip"
+  ) || [];
+
+  // Mutations
+  const createEntry = useMutation(api.journalEntries.createJournalEntry);
+  const updateEntry = useMutation(api.journalEntries.updateJournalEntry);
+  const deleteEntry = useMutation(api.journalEntries.deleteJournalEntry);
 
   // Close other modals when add modal opens
   React.useEffect(() => {
@@ -82,7 +95,7 @@ export default function JournalScreen() {
     // Other modals close automatically via useEffect
   };
 
-  const handleDeleteEntry = (entryId: string) => {
+  const handleDeleteEntry = async (entryId: string) => {
     Alert.alert(
       'Delete Entry',
       'Are you sure you want to delete this journal entry?',
@@ -91,9 +104,14 @@ export default function JournalScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            setEntries(prev => prev.filter(e => e.id !== entryId));
-            setSelectedEntry(null); // Close detail modal
+          onPress: async () => {
+            try {
+              await deleteEntry({ entryId: entryId as any });
+              setSelectedEntry(null); // Close detail modal
+            } catch (error) {
+              console.error('Error deleting entry:', error);
+              Alert.alert('Error', 'Failed to delete journal entry');
+            }
           }
         }
       ]
@@ -142,6 +160,27 @@ export default function JournalScreen() {
     );
   };
 
+  // Show loading state while data is loading
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container as any}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Please sign in to view your journal</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (entries === undefined) {
+    return (
+      <SafeAreaView style={styles.container as any}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading your journal entries...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container as any}>
       <View style={styles.header}>
@@ -176,15 +215,18 @@ export default function JournalScreen() {
         entry={selectedEntry}
         visible={!!selectedEntry}
         onClose={() => setSelectedEntry(null)}
-        onSave={(updatedEntry) => {
+        onSave={async (updatedEntry) => {
           if (selectedEntry) {
-            setEntries(prev => 
-              prev.map(e => 
-                e.id === selectedEntry.id 
-                  ? { ...e, ...updatedEntry, updated_at: new Date().toISOString() }
-                  : e
-              )
-            );
+            try {
+              await updateEntry({
+                entryId: selectedEntry.id as any,
+                title: updatedEntry.title,
+                content: updatedEntry.content,
+              });
+            } catch (error) {
+              console.error('Error updating entry:', error);
+              Alert.alert('Error', 'Failed to update journal entry');
+            }
           }
         }}
         onDelete={handleDeleteEntry}
@@ -194,15 +236,20 @@ export default function JournalScreen() {
       <AddEditEntryModal
         visible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
-        onSave={(newEntry) => {
-          const entry: JournalEntry = {
-            ...newEntry,
-            id: `journal_${Date.now()}`,
-            user_id: 'user_1',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          setEntries(prev => [entry, ...prev]);
+        onSave={async (newEntry) => {
+          if (!userId) return;
+          
+          try {
+            await createEntry({
+              userId,
+              date: newEntry.date,
+              title: newEntry.title,
+              content: newEntry.content,
+            });
+          } catch (error) {
+            console.error('Error creating entry:', error);
+            Alert.alert('Error', 'Failed to create journal entry');
+          }
         }}
       />
 
@@ -382,7 +429,7 @@ function AddEditEntryModal({ visible, entry, onClose, onSave }: AddEditEntryModa
           >
           <View style={styles.inputGroup}>
             <TextInput
-              style={styles.titleInput}
+              style={styles.titleInputStyled}
               value={title}
               onChangeText={setTitle}
               placeholder="Give your entry a title..."
@@ -392,7 +439,7 @@ function AddEditEntryModal({ visible, entry, onClose, onSave }: AddEditEntryModa
 
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Content</Text>
+            <Text style={styles.inputLabel}>Your thoughts</Text>
             <TextInput
               style={styles.contentInput}
               value={content}
@@ -600,14 +647,6 @@ const styles = StyleSheet.create({
     color: Colors.neutral[800],
     marginBottom: Spacing.sm,
   },
-  titleInput: {
-    ...Typography.body,
-    borderWidth: 1,
-    borderColor: Colors.neutral[300],
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    backgroundColor: Colors.neutral[50],
-  },
   contentInput: {
     ...Typography.body,
     borderWidth: 1,
@@ -667,5 +706,16 @@ const styles = StyleSheet.create({
     color: Colors.alert[600],
     marginLeft: Spacing.sm,
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  loadingText: {
+    ...Typography.body,
+    color: Colors.neutral[600],
+    textAlign: 'center',
   },
 });
