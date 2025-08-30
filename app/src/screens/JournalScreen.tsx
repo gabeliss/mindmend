@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
+import { ScrollView } from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius } from '../lib/design-system';
@@ -22,21 +24,6 @@ function formatDate(dateString: string) {
   return { dayName, dayNumber };
 }
 
-const MOOD_COLORS = {
-  great: Colors.success[500],
-  good: Colors.success[500], 
-  okay: Colors.warning[500],
-  poor: Colors.warning[600],
-  terrible: Colors.alert[500],
-};
-
-const MOOD_ICONS = {
-  great: 'happy-outline' as const,
-  good: 'thumbs-up-outline' as const,
-  okay: 'remove-outline' as const,
-  poor: 'thumbs-down-outline' as const,
-  terrible: 'sad-outline' as const,
-};
 
 export default function JournalScreen() {
   const [entries, setEntries] = useState<JournalEntry[]>(mockJournalEntries || []);
@@ -131,27 +118,8 @@ export default function JournalScreen() {
             <Text style={styles.dayNumber}>{dayNumber}</Text>
             <Text style={styles.dayName}>{dayName}</Text>
           </View>
-          <View style={styles.entryMeta}>
-            {entry.mood && (
-              <View style={[styles.moodIndicator, { backgroundColor: MOOD_COLORS[entry.mood] }]}>
-                <Ionicons name={MOOD_ICONS[entry.mood]} size={16} color={Colors.neutral[50]} />
-              </View>
-            )}
-          </View>
         </View>
         <Text style={styles.entryPreview} numberOfLines={2}>{entry.content || 'No content'}</Text>
-        {entry.tags && entry.tags.length > 0 && (
-          <View style={styles.tagsContainer}>
-            {entry.tags.slice(0, 3).map((tag, index) => (
-              <View key={tag || index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag || ''}</Text>
-              </View>
-            ))}
-            {entry.tags.length > 3 && (
-              <Text style={styles.moreTagsText}>+{entry.tags.length - 3} more</Text>
-            )}
-          </View>
-        )}
       </TouchableOpacity>
     );
   };
@@ -254,15 +222,11 @@ interface EntryDetailModalProps {
 function EntryDetailModal({ entry, visible, onClose, onSave, onDelete }: EntryDetailModalProps) {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
-  const [editMood, setEditMood] = useState<JournalEntry['mood']>(undefined);
-  const [editTags, setEditTags] = useState('');
 
   React.useEffect(() => {
     if (entry) {
       setEditTitle(entry.title || '');
       setEditContent(entry.content || '');
-      setEditMood(entry.mood);
-      setEditTags(entry.tags?.join(', ') || '');
     }
   }, [entry]);
 
@@ -276,19 +240,13 @@ function EntryDetailModal({ entry, visible, onClose, onSave, onDelete }: EntryDe
   });
 
   const handleSave = () => {
-    const tagsArray = editTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    
     onSave({
       title: editTitle.trim(),
       content: editContent.trim(),
-      mood: editMood,
-      tags: tagsArray.length > 0 ? tagsArray : undefined,
     });
     
     onClose(); // Close the modal after saving
   };
-
-  const moods: JournalEntry['mood'][] = ['great', 'good', 'okay', 'poor', 'terrible'];
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -304,39 +262,23 @@ function EntryDetailModal({ entry, visible, onClose, onSave, onDelete }: EntryDe
           </TouchableOpacity>
         </View>
 
-        <View style={styles.modalContent}>
-          {/* Date and Mood Section */}
+        <KeyboardAvoidingView 
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView 
+            style={styles.modalContent}
+            contentContainerStyle={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+          {/* Date Section */}
           <View style={styles.metaSection}>
             <Text style={styles.dateText}>{fullDate}</Text>
-            <View style={styles.moodSection}>
-              <Text style={styles.moodLabel}>How are you feeling?</Text>
-              <View style={styles.moodSelector}>
-                {moods.map(moodOption => (
-                  <TouchableOpacity
-                    key={moodOption}
-                    style={[
-                      styles.moodOptionSmall,
-                      editMood === moodOption && { 
-                        backgroundColor: MOOD_COLORS[moodOption],
-                        borderColor: MOOD_COLORS[moodOption],
-                      }
-                    ]}
-                    onPress={() => setEditMood(editMood === moodOption ? undefined : moodOption)}
-                  >
-                    <Ionicons 
-                      name={MOOD_ICONS[moodOption]} 
-                      size={16} 
-                      color={editMood === moodOption ? Colors.neutral[50] : MOOD_COLORS[moodOption]} 
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
           </View>
           
-          {/* Title Input with Label */}
+          {/* Title Input */}
           <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Title</Text>
             <TextInput
               style={styles.titleInputStyled}
               value={editTitle}
@@ -359,19 +301,6 @@ function EntryDetailModal({ entry, visible, onClose, onSave, onDelete }: EntryDe
               textAlignVertical="top"
             />
           </View>
-          
-          {/* Tags Input with Label */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Tags</Text>
-            <TextInput
-              style={styles.tagsInputStyled}
-              value={editTags}
-              onChangeText={setEditTags}
-              placeholder="productivity, reflection, goals..."
-              placeholderTextColor={Colors.neutral[400]}
-            />
-            <Text style={styles.tagsHint}>Separate tags with commas</Text>
-          </View>
 
           {/* Delete Button at Bottom */}
           <TouchableOpacity 
@@ -381,7 +310,8 @@ function EntryDetailModal({ entry, visible, onClose, onSave, onDelete }: EntryDe
             <Ionicons name="trash-outline" size={20} color={Colors.alert[600]} />
             <Text style={styles.deleteText}>Delete Entry</Text>
           </TouchableOpacity>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   );
@@ -399,22 +329,16 @@ interface AddEditEntryModalProps {
 function AddEditEntryModal({ visible, entry, onClose, onSave }: AddEditEntryModalProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [mood, setMood] = useState<JournalEntry['mood']>(undefined);
-  const [tags, setTags] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   React.useEffect(() => {
     if (entry) {
       setTitle(entry.title);
       setContent(entry.content);
-      setMood(entry.mood);
-      setTags(entry.tags?.join(', ') || '');
       setDate(entry.date);
     } else {
       setTitle('');
       setContent('');
-      setMood(undefined);
-      setTags('');
       setDate(new Date().toISOString().split('T')[0]);
     }
   }, [entry, visible]);
@@ -424,20 +348,14 @@ function AddEditEntryModal({ visible, entry, onClose, onSave }: AddEditEntryModa
       Alert.alert('Missing Information', 'Please provide both a title and content for your journal entry.');
       return;
     }
-
-    const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
     
     onSave({
       title: title.trim(),
       content: content.trim(),
-      mood,
-      tags: tagsArray.length > 0 ? tagsArray : undefined,
       date,
     });
     onClose();
   };
-
-  const moods: JournalEntry['mood'][] = ['great', 'good', 'okay', 'poor', 'terrible'];
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -452,9 +370,17 @@ function AddEditEntryModal({ visible, entry, onClose, onSave }: AddEditEntryModa
           </TouchableOpacity>
         </View>
 
-        <View style={styles.modalContent}>
+        <KeyboardAvoidingView 
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView 
+            style={styles.modalContent}
+            contentContainerStyle={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Title</Text>
             <TextInput
               style={styles.titleInput}
               value={title}
@@ -464,30 +390,6 @@ function AddEditEntryModal({ visible, entry, onClose, onSave }: AddEditEntryModa
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>How are you feeling?</Text>
-            <View style={styles.moodSelector}>
-              {moods.map(moodOption => (
-                <TouchableOpacity
-                  key={moodOption}
-                  style={[
-                    styles.moodOption,
-                    mood === moodOption && { 
-                      backgroundColor: MOOD_COLORS[moodOption],
-                      borderColor: MOOD_COLORS[moodOption],
-                    }
-                  ]}
-                  onPress={() => setMood(mood === moodOption ? undefined : moodOption)}
-                >
-                  <Ionicons 
-                    name={MOOD_ICONS[moodOption]} 
-                    size={24} 
-                    color={mood === moodOption ? Colors.neutral[50] : MOOD_COLORS[moodOption]} 
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Content</Text>
@@ -502,17 +404,8 @@ function AddEditEntryModal({ visible, entry, onClose, onSave }: AddEditEntryModa
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Tags (comma separated)</Text>
-            <TextInput
-              style={styles.titleInput}
-              value={tags}
-              onChangeText={setTags}
-              placeholder="productivity, exercise, reflection..."
-              placeholderTextColor={Colors.neutral[400]}
-            />
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   );
@@ -594,18 +487,6 @@ const styles = StyleSheet.create({
     color: Colors.neutral[600],
     textTransform: 'uppercase',
   },
-  entryMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  moodIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   editButton: {
     padding: Spacing.xs,
   },
@@ -618,26 +499,6 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.neutral[600],
     marginBottom: Spacing.sm,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.xs,
-  },
-  tag: {
-    backgroundColor: Colors.primary[100],
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs / 2,
-    borderRadius: BorderRadius.sm,
-  },
-  tagText: {
-    ...Typography.caption,
-    color: Colors.primary[700],
-  },
-  moreTagsText: {
-    ...Typography.caption,
-    color: Colors.neutral[500],
-    alignSelf: 'center',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -696,7 +557,13 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
+  },
+  modalScrollContent: {
     padding: Spacing.xl,
+    paddingBottom: Spacing['5xl'],
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   entryDetailHeader: {
     flexDirection: 'row',
@@ -750,69 +617,24 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral[50],
     minHeight: 200,
   },
-  moodSelector: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  moodOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.neutral[300],
-    backgroundColor: Colors.neutral[50],
-  },
-  selectedMoodOption: {
-    borderWidth: 0,
-  },
-  moodOptionSmall: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.neutral[300],
-    backgroundColor: Colors.neutral[50],
-  },
   headerAction: {
     padding: Spacing.sm,
     minWidth: 60,
-  },
-  metaSection: {
-    marginBottom: Spacing.xl,
   },
   dateText: {
     ...Typography.body,
     color: Colors.neutral[600],
     marginBottom: Spacing.lg,
   },
-  moodSection: {
-    marginBottom: Spacing.sm,
-  },
-  moodLabel: {
-    ...Typography.body,
-    fontWeight: '600',
-    color: Colors.neutral[700],
-    marginBottom: Spacing.sm,
-  },
   inputSection: {
     marginBottom: Spacing.xl,
-  },
-  inputLabel: {
-    ...Typography.body,
-    fontWeight: '600',
-    color: Colors.neutral[800],
-    marginBottom: Spacing.sm,
   },
   titleInputStyled: {
     ...Typography.h3,
     borderWidth: 0,
     borderBottomWidth: 2,
     borderBottomColor: Colors.neutral[200],
-    paddingVertical: Spacing.md,
+    paddingBottom: Spacing.md,
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
     color: Colors.neutral[800],
@@ -845,23 +667,5 @@ const styles = StyleSheet.create({
     color: Colors.alert[600],
     marginLeft: Spacing.sm,
     fontWeight: '500',
-  },
-  tagsInputStyled: {
-    ...Typography.body,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    borderRadius: BorderRadius.md,
-    paddingBottom: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.neutral[50],
-    color: Colors.neutral[800],
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-  },
-  tagsHint: {
-    ...Typography.caption,
-    color: Colors.neutral[500],
-    marginTop: Spacing.xs,
-    fontStyle: 'italic',
   },
 });

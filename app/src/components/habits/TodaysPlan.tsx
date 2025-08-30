@@ -54,7 +54,11 @@ export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlan
   
   // Get plan items sorted by order, then separate by time vs no-time
   const sortedItems = dailyPlan?.entries.sort((a, b) => a.order - b.order) || [];
-  const timedItems = sortedItems.filter(item => item.time);
+  const timedItems = sortedItems.filter(item => item.time).sort((a, b) => {
+    // Sort timed items by time (24-hour format: "08:00", "09:00", etc.)
+    if (!a.time || !b.time) return 0;
+    return a.time.localeCompare(b.time);
+  });
   const untimedItems = sortedItems.filter(item => !item.time);
   
   const completedCount = sortedItems.filter(item => item.completed).length;

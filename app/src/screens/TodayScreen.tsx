@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.md,
   },
   tabRow: {
     flexDirection: 'row',
