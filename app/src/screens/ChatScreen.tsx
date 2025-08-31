@@ -163,7 +163,7 @@ export default function ChatScreen() {
   // Empty state
   if (messages.length === 0 && !isAiTyping) {
     return (
-      <SafeAreaView style={styles.container as any}>
+      <SafeAreaView style={styles.container as any} edges={['top']}>
         <KeyboardAvoidingView 
           style={styles.keyboardContainer}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -217,7 +217,7 @@ export default function ChatScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container as any}>
+    <SafeAreaView style={styles.container as any} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Chat</Text>
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   // Input
   inputContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.lg,
     backgroundColor: Colors.neutral[50],
     borderTopWidth: 1,
