@@ -14,10 +14,9 @@ interface TodaysPlanProps {
   onDeletePlanItem: (itemId: string) => void;
   mode: 'today' | 'tomorrow';
   onMoveUnfinishedToTomorrow?: () => void;
-  onCopyFromToday?: () => void;
 }
 
-export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlanItem, onEditPlanItem, onDeletePlanItem, mode, onMoveUnfinishedToTomorrow, onCopyFromToday }: TodaysPlanProps) {
+export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlanItem, onEditPlanItem, onDeletePlanItem, mode, onMoveUnfinishedToTomorrow }: TodaysPlanProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [inputValue, setInputValue] = useState('');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -282,19 +281,6 @@ export default function TodaysPlan({ dailyPlan, onPlanItemToggle, onSmartAddPlan
             </TouchableOpacity>
           )}
 
-          {/* Copy from Today Button for Tomorrow */}
-          {!isToday && onCopyFromToday && (
-            <TouchableOpacity 
-              style={styles.copyFromTodayButton}
-              onPress={onCopyFromToday}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="copy-outline" size={20} color={Colors.secondary[600]} />
-              <Text style={styles.copyFromTodayButtonText}>
-                Copy from today's plan
-              </Text>
-            </TouchableOpacity>
-          )}
 
           {totalCount === 0 ? (
             <View style={styles.emptyState}>
@@ -442,24 +428,6 @@ const styles = StyleSheet.create({
   moveTasksButtonText: {
     ...Typography.bodySmall,
     color: Colors.primary[600],
-    fontWeight: '500',
-    marginLeft: Spacing.xs,
-  },
-  copyFromTodayButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.secondary[50],
-    borderWidth: 1,
-    borderColor: Colors.secondary[200],
-    borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  copyFromTodayButtonText: {
-    ...Typography.bodySmall,
-    color: Colors.secondary[600],
     fontWeight: '500',
     marginLeft: Spacing.xs,
   },

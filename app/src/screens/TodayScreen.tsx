@@ -3,11 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation } from 'convex/react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../lib/design-system';
-import { DailyPlan, DailyPlanItem } from '../types/habits';
+import { DailyPlan } from '../types/habits';
 import TodaysPlan from '../components/habits/TodaysPlan';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../../convex/_generated/api';
@@ -25,14 +24,13 @@ export default function TodayScreen() {
 
   const todayString = getDateString(new Date());
   const tomorrowString = getDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
-  const yesterdayString = getDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
 
   // Query daily plans for today and tomorrow
   const dailyPlans = useQuery(
     api.dailyPlans.getDailyPlans,
     isAuthenticated && userId ? {
       userId: userId,
-      startDate: yesterdayString, // Include yesterday for rollover functionality
+      startDate: todayString, // Only fetch today and tomorrow
       endDate: tomorrowString,
     } : "skip"
   );
@@ -42,7 +40,6 @@ export default function TodayScreen() {
   const updatePlanItem = useMutation(api.dailyPlans.updatePlanItem);
   const deletePlanItem = useMutation(api.dailyPlans.deletePlanItem);
   const togglePlanItem = useMutation(api.dailyPlans.togglePlanItem);
-  const copyPlanToDate = useMutation(api.dailyPlans.copyPlanToDate);
   const moveIncompleteTasks = useMutation(api.dailyPlans.moveIncompleteTasks);
 
   const getTodaysPlan = (): DailyPlan | undefined => {
@@ -62,34 +59,6 @@ export default function TodayScreen() {
     return getDateString(date);
   };
 
-  // Auto-rollover functionality for midnight transitions
-  useEffect(() => {
-    const checkAndPerformRollover = async () => {
-      if (!userId || !isAuthenticated) return;
-      
-      try {
-        const lastCheckDate = await AsyncStorage.getItem('lastCheckDate');
-        const today = getDateString(new Date());
-        
-        if (lastCheckDate && lastCheckDate !== today) {
-          // Date has changed since last check - perform rollover
-          // Copy yesterday's tomorrow plan to today
-          await copyPlanToDate({
-            userId,
-            fromDate: today, // This would be yesterday's tomorrow in the new day
-            toDate: today,
-          });
-        }
-        
-        // Update last check date
-        await AsyncStorage.setItem('lastCheckDate', today);
-      } catch (error) {
-        console.error('Error during rollover check:', error);
-      }
-    };
-
-    checkAndPerformRollover();
-  }, [userId, isAuthenticated, copyPlanToDate]); // Dependencies for the effect
 
   const handlePlanItemToggle = async (itemId: string) => {
     try {
@@ -152,19 +121,6 @@ export default function TodayScreen() {
     }
   };
 
-  const handleCopyFromToday = async () => {
-    if (!userId || !isAuthenticated) return;
-    
-    try {
-      await copyPlanToDate({
-        userId,
-        fromDate: todayString,
-        toDate: tomorrowString,
-      });
-    } catch (error) {
-      console.error('Error copying plan from today:', error);
-    }
-  };
 
   // Show loading state while data is loading
   if (!isAuthenticated) {
@@ -262,7 +218,6 @@ export default function TodayScreen() {
           onDeletePlanItem={handleDeletePlanItem}
           mode={activeTab}
           onMoveUnfinishedToTomorrow={activeTab === 'today' ? handleMoveUnfinishedToTomorrow : undefined}
-          onCopyFromToday={activeTab === 'tomorrow' ? handleCopyFromToday : undefined}
         />
       </ScrollView>
 
