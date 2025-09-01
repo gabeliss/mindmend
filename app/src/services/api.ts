@@ -1,8 +1,7 @@
 // Convex API service layer
 // This file will contain helper functions for calling Convex mutations and queries
 
-import { convex } from "./convex";
-import { api } from "../../../convex/_generated/api";
+import { convex, api } from "./convex";
 
 // Habit operations
 export const habitAPI = {

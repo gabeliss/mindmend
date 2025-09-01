@@ -14,6 +14,8 @@ import { KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../lib/design-system';
+import { useChatContext } from '../hooks/useChatContext';
+import { sendMessageWithContext } from '../utils/chatIntegration';
 
 // Message interface
 interface ChatMessage {
@@ -117,7 +119,16 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [pendingUserMessage, setPendingUserMessage] = useState<string>('');
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Get context for the current user message (only when we have a pending message)
+  const { context, isLoading, isAuthenticated } = useChatContext({
+    query: pendingUserMessage || undefined,
+    includeJournals: true,
+    maxJournalEntries: 3,
+    habitHistoryDays: 30,
+  });
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -130,35 +141,88 @@ export default function ChatScreen() {
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
+    const userMessageText = inputText.trim();
     const userMessage: ChatMessage = {
       id: `user_${Date.now()}`,
-      text: inputText.trim(),
+      text: userMessageText,
       isUser: true,
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
-    scrollToBottom();
-
+    
+    // Set pending message to trigger context loading
+    setPendingUserMessage(userMessageText);
+    
     // Show AI typing indicator
     setIsAiTyping(true);
     scrollToBottom();
+  };
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      const aiMessage: ChatMessage = {
-        id: `ai_${Date.now()}`,
-        text: "Thanks for your message! I'm here to help you with anything related to your habits, journal, or daily planning. This is a placeholder response while we work on the AI integration.",
-        isUser: false,
-        timestamp: new Date(),
+  // Process AI response when context is ready
+  useEffect(() => {
+    if (pendingUserMessage && isAiTyping) {
+      const processAIResponse = async () => {
+        try {
+          // If user is not authenticated, provide a helpful message
+          if (!isAuthenticated) {
+            const authMessage: ChatMessage = {
+              id: `ai_${Date.now()}`,
+              text: "Please sign in to get personalized responses based on your habits and journal entries.",
+              isUser: false,
+              timestamp: new Date(),
+            };
+
+            setIsAiTyping(false);
+            setMessages(prev => [...prev, authMessage]);
+            setPendingUserMessage('');
+            scrollToBottom();
+            return;
+          }
+
+          // Wait for context to be ready if user is authenticated
+          if (context === undefined) {
+            // Context is still loading, wait a bit longer
+            setTimeout(processAIResponse, 500);
+            return;
+          }
+
+          // Get AI response with context
+          const aiResponseText = await sendMessageWithContext(pendingUserMessage, context);
+          
+          const aiMessage: ChatMessage = {
+            id: `ai_${Date.now()}`,
+            text: aiResponseText,
+            isUser: false,
+            timestamp: new Date(),
+          };
+
+          setIsAiTyping(false);
+          setMessages(prev => [...prev, aiMessage]);
+          setPendingUserMessage(''); // Clear pending message
+          scrollToBottom();
+        } catch (error) {
+          console.error('Error processing AI response:', error);
+          
+          const errorMessage: ChatMessage = {
+            id: `ai_${Date.now()}`,
+            text: "I'm sorry, I encountered an error processing your message. Please try again.",
+            isUser: false,
+            timestamp: new Date(),
+          };
+
+          setIsAiTyping(false);
+          setMessages(prev => [...prev, errorMessage]);
+          setPendingUserMessage(''); // Clear pending message
+          scrollToBottom();
+        }
       };
 
-      setIsAiTyping(false);
-      setMessages(prev => [...prev, aiMessage]);
-      scrollToBottom();
-    }, 1500 + Math.random() * 1000); // Random delay between 1.5-2.5s
-  };
+      // Add a slight delay to make the interaction feel more natural
+      setTimeout(processAIResponse, 800);
+    }
+  }, [pendingUserMessage, context, isAiTyping, isAuthenticated]);
 
   // Empty state
   if (messages.length === 0 && !isAiTyping) {

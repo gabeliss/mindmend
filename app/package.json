@@ -31,6 +31,7 @@
     "expo-updates": "~0.28.17",
     "expo-web-browser": "~14.2.0",
     "metro": "^0.82.0",
+    "openai": "^5.16.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.5",

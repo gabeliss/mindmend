@@ -19,6 +19,15 @@ export const api = {
     createHabitEvent: "habitEvents:createHabitEvent" as any,
     updateHabitEvent: "habitEvents:updateHabitEvent" as any,
     deleteHabitEvent: "habitEvents:deleteHabitEvent" as any,
+  },
+  chatContext: {
+    getChatContext: "chatContext:getChatContext" as any,
+    getQueryContext: "chatContext:getQueryContext" as any,
+    getHabitContext: "chatContext:getHabitContext" as any,
+    searchJournalEntries: "chatContext:searchJournalEntries" as any,
+  },
+  chat: {
+    sendChatMessage: "chat:sendChatMessage" as any,
   }
 };
 
