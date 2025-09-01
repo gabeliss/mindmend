@@ -101,4 +101,20 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_user_date", ["user_id", "date"])
     .index("by_date", ["date"]),
+
+  correlation_cache: defineTable({
+    user_id: v.string(),
+    correlations: v.array(v.any()),
+    calculatedAt: v.string(),
+    validUntil: v.string(),
+  })
+    .index("by_user", ["user_id"]),
+
+  correlation_trigger_tracker: defineTable({
+    user_id: v.string(),
+    lastUpdateAt: v.string(),
+    eventsSinceUpdate: v.number(),
+    totalEvents: v.number(),
+  })
+    .index("by_user", ["user_id"]),
 });

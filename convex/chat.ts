@@ -9,7 +9,7 @@ const openai = new OpenAI({
 
 
 // Helper function to format context for AI (server-side version)
-function formatContextForAI(context: any): string {
+function formatContextForAI(context: any, correlationInsights?: any[]): string {
   if (!context) return "";
 
   let prompt = `Current Context (${context.currentDate}):\n\n`;
@@ -60,8 +60,18 @@ function formatContextForAI(context: any): string {
     });
   }
 
+  // Habit correlation insights
+  if (correlationInsights && correlationInsights.length > 0) {
+    prompt += `\nHabit Pattern Insights:\n`;
+    correlationInsights.forEach((insight: any) => {
+      prompt += `- ${insight.description} (${Math.round(insight.confidence * 100)}% confidence, ${insight.sampleSize} days data)\n`;
+    });
+    prompt += `\n`;
+  }
+
   return prompt;
 }
+
 
 export const sendChatMessage = action({
   args: {
@@ -84,8 +94,14 @@ export const sendChatMessage = action({
         timezoneOffset: args.timezoneOffset,
       });
 
+      // Get ALL correlation insights for AI to understand and filter intelligently
+      const allCorrelationInsights = await ctx.runQuery(api.correlations.getFastCorrelationInsights, {
+        relevantHabits: [], // Get all correlations, let AI decide what's relevant
+        maxInsights: 10, // Give AI more data to work with
+      });
+
       // Format context for AI
-      const contextPrompt = formatContextForAI(context);
+      const contextPrompt = formatContextForAI(context, allCorrelationInsights);
       
       // Create system prompt
       const systemPrompt = `You are a helpful AI assistant for a personal development app called MindMend. You help users with their habits, daily planning, and journaling.
@@ -99,6 +115,21 @@ Key principles:
 - If they mention failing or struggling, acknowledge it warmly and offer practical next steps
 - Focus on progress over perfection - celebrate small wins
 - Be conversational and friendly, not robotic
+
+Natural Language Understanding:
+- When users ask about correlations between habits, understand the INTENT behind their words
+- Bridge the gap between their question and the actual habit data
+- Example: "Does PMO avoidance affect my workouts?" → Look for correlations between "Avoid PMO" habit and exercise habits
+- Example: "How does my morning routine impact my day?" → Look for correlations involving early habits and later habits
+- Example: "When I skip meditation, what happens?" → Look for patterns when meditation is missed
+
+Progressive Enhancement Strategy:
+- ALWAYS provide helpful responses based on basic habit data (streaks, completion rates)  
+- Use your understanding of human behavior and the user's specific habits to interpret vague questions
+- When correlation data is available, reference specific patterns you see in their data
+- Connect user's natural language to their actual habit names (even if names are different from common terms)
+- If asking about specific correlations, prioritize those insights in your response
+- Focus on actionable insights: "I notice when you do X, Y tends to happen - try leveraging this pattern"
 
 ${contextPrompt}
 

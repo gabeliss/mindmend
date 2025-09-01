@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as chat from "../chat.js";
 import type * as chatContext from "../chatContext.js";
+import type * as correlations from "../correlations.js";
 import type * as dailyPlans from "../dailyPlans.js";
 import type * as habitEvents from "../habitEvents.js";
 import type * as habits from "../habits.js";
@@ -31,6 +32,7 @@ import type * as journalEntries from "../journalEntries.js";
 declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   chatContext: typeof chatContext;
+  correlations: typeof correlations;
   dailyPlans: typeof dailyPlans;
   habitEvents: typeof habitEvents;
   habits: typeof habits;

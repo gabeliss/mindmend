@@ -28,6 +28,13 @@ export const api = {
   },
   chat: {
     sendChatMessage: "chat:sendChatMessage" as any,
+  },
+  correlations: {
+    calculateHabitCorrelations: "correlations:calculateHabitCorrelations" as any,
+    getCachedCorrelations: "correlations:getCachedCorrelations" as any,
+    getCorrelationInsights: "correlations:getCorrelationInsights" as any,
+    getFastCorrelationInsights: "correlations:getFastCorrelationInsights" as any,
+    triggerCorrelationUpdate: "correlations:triggerCorrelationUpdate" as any,
   }
 };
 

@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 import { v } from "convex/values";
 
 // Validation function for habit events
@@ -93,6 +94,16 @@ export const createHabitEvent = mutation({
       updated_at: now,
     });
 
+    // Trigger smart correlation update in background (non-blocking)
+    try {
+      await ctx.runMutation(api.correlations.triggerCorrelationUpdate, {
+        userId: args.user_id,
+      });
+    } catch (error) {
+      // Don't fail the habit event creation if correlation update fails
+      console.log("Correlation trigger failed (non-critical):", error);
+    }
+
     return eventId;
   },
 });
@@ -138,6 +149,17 @@ export const updateHabitEvent = mutation({
       ...updateData,
       updated_at: now,
     });
+
+    // Trigger smart correlation update if status changed (non-blocking)
+    if (updateData.status) {
+      try {
+        await ctx.runMutation(api.correlations.triggerCorrelationUpdate, {
+          userId: user_id,
+        });
+      } catch (error) {
+        console.log("Correlation trigger failed (non-critical):", error);
+      }
+    }
     
     return id;
   },
