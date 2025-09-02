@@ -8,7 +8,8 @@ export const shouldShowTimeInput = (status: HabitStatus, habit?: Habit): boolean
     return false;
   }
   
-  return status !== 'skipped' && status !== 'not_logged';
+  // Show time input for all statuses except 'not_logged'
+  return status !== 'not_logged';
 };
 
 export const getGoalDescription = (habit: Habit, date: Date): string => {
@@ -26,7 +27,7 @@ export const getTimeInputPlaceholder = (habit: Habit): string => {
   return '';
 };
 
-export const getTimeInputLabel = (habit: Habit, goalDescription: string): string => {
+export const getTimeInputLabel = (habit: Habit, _goalDescription: string): string => {
   if (habit.type === 'schedule') {
     return 'Time';
   } else if (habit.type === 'duration') {

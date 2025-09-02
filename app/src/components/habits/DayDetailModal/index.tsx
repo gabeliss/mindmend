@@ -149,7 +149,8 @@ export default function DayDetailModal({
   const handleStatusChange = (newStatus: HabitStatus) => {
     setStatus(newStatus);
     
-    if (newStatus === 'skipped' || newStatus === 'not_logged') {
+    // Only clear time value for 'not_logged', allow user to set value for 'skipped'
+    if (newStatus === 'not_logged') {
       setTimeValue('');
     }
   };
@@ -242,21 +243,38 @@ export default function DayDetailModal({
       return;
     }
 
+    // Handle 'not_logged' status by deleting the existing event
+    if (status === 'not_logged') {
+      if (event?.id && onDeleteEvent) {
+        onDeleteEvent(event.id);
+      }
+      onClose();
+      return;
+    }
+
     let parsedValue: number | undefined;
     
-    if (habit.type === 'schedule') {
-      // Use selectedTime for time_of_day goals
-      parsedValue = convertDateToTimeDecimal(selectedTime);
+    if (status === 'skipped') {
+      // For 'skipped', use parsed value if user entered one, otherwise null
+      if (habit.type === 'schedule') {
+        parsedValue = timeValue ? convertDateToTimeDecimal(selectedTime) : undefined;
+      } else {
+        parsedValue = parseTimeValue(timeValue, habit);
+      }
     } else {
-      // Use parsed text input for other goal types
-      parsedValue = parseTimeValue(timeValue, habit);
-    }
-    
-    // Only require values for quantity, duration, and schedule habits
-    if (status !== 'skipped' && status !== 'not_logged' && parsedValue === undefined) {
-      if (habit.type === 'quantity' || habit.type === 'duration' || habit.type === 'schedule') {
-        Alert.alert('Missing Value', 'Please enter a time or value for this day.');
-        return;
+      // For other statuses (completed, failed), require value
+      if (habit.type === 'schedule') {
+        parsedValue = convertDateToTimeDecimal(selectedTime);
+      } else {
+        parsedValue = parseTimeValue(timeValue, habit);
+      }
+      
+      // Only require values for quantity, duration, and schedule habits
+      if (parsedValue === undefined) {
+        if (habit.type === 'quantity' || habit.type === 'duration' || habit.type === 'schedule') {
+          Alert.alert('Missing Value', 'Please enter a time or value for this day.');
+          return;
+        }
       }
     }
 
