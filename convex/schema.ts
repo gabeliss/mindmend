@@ -117,4 +117,20 @@ export default defineSchema({
     totalEvents: v.number(),
   })
     .index("by_user", ["user_id"]),
+
+  daily_reflections: defineTable({
+    user_id: v.string(),
+    date: v.string(), // YYYY-MM-DD format
+    prompt_type: v.union(v.literal("morning"), v.literal("evening")),
+    content: v.string(),
+    is_draft: v.boolean(),
+    is_journaled: v.optional(v.boolean()),
+    created_at: v.string(),
+    updated_at: v.string(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_date", ["user_id", "date"])
+    .index("by_user_date_type", ["user_id", "date", "prompt_type"])
+    .index("by_draft_status", ["is_draft"])
+    .index("by_user_drafts", ["user_id", "is_draft"]),
 });

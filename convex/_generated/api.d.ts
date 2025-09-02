@@ -20,6 +20,7 @@ import type * as dailyPlans from "../dailyPlans.js";
 import type * as habitEvents from "../habitEvents.js";
 import type * as habits from "../habits.js";
 import type * as journalEntries from "../journalEntries.js";
+import type * as reflections from "../reflections.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   habitEvents: typeof habitEvents;
   habits: typeof habits;
   journalEntries: typeof journalEntries;
+  reflections: typeof reflections;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

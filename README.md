@@ -53,6 +53,16 @@ eas update --branch dev --message "your update message"
 
 This publishes over-the-air updates that users will receive automatically.
 
+#### Deploying Backend Changes
+
+Deploy Convex backend functions after making changes:
+
+```bash
+npx convex dev
+```
+
+This pushes your Convex functions and schema changes to the development deployment.
+
 ### Building
 
 Build the web application:

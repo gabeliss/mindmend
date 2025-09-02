@@ -76,8 +76,6 @@ export default function HabitsScreen() {
       return;
     }
 
-    console.log('Saving habit event:', updatedEvent);
-
     try {
       if (updatedEvent.id && !updatedEvent.id.startsWith('event_') && !updatedEvent.id.startsWith('avoided_') && !updatedEvent.id.startsWith('skipped_') && !updatedEvent.id.startsWith('relapse_')) {
         // Update existing event (has a real Convex ID)
@@ -91,7 +89,6 @@ export default function HabitsScreen() {
         if (updatedEvent.note !== undefined) updateData.note = updatedEvent.note;
         if (updatedEvent.timestamp !== undefined) updateData.timestamp = updatedEvent.timestamp;
 
-        console.log('Updating event with:', updateData);
         await updateHabitEvent(updateData);
       } else {
         // Create new event
@@ -111,7 +108,6 @@ export default function HabitsScreen() {
         if (updatedEvent.note !== undefined) createData.note = updatedEvent.note;
         if (updatedEvent.timestamp !== undefined) createData.timestamp = updatedEvent.timestamp;
 
-        console.log('Creating event with:', createData);
         await createHabitEvent(createData);
       }
 
@@ -336,11 +332,9 @@ export default function HabitsScreen() {
     try {
       // Persist the new order to the backend
       await updateHabitsOrder({ habitOrders });
-      console.log('Successfully updated habit order in backend');
     } catch (error) {
       console.error('Failed to update habit order:', error);
       // Optionally revert local state if backend update fails
-      // You could re-fetch habits here to restore the original order
     }
   };
 

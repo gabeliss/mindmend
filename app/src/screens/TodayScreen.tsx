@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation } from 'convex/react';
 import { Ionicons } from '@expo/vector-icons';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../lib/design-system';
 import { DailyPlan } from '../types/habits';
 import TodaysPlan from '../components/habits/TodaysPlan';
+import TimeAwarePrompt from '../components/TimeAwarePrompt';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../../convex/_generated/api';
 
@@ -17,6 +18,8 @@ export default function TodayScreen() {
   const { userId, isAuthenticated } = useAuth();
   
   const [activeTab, setActiveTab] = useState<TabType>('today');
+  const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const getDateString = (date: Date): string => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -144,83 +147,100 @@ export default function TodayScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Today</Text>
-        <TouchableOpacity 
-          style={styles.quickAddButton}
-          onPress={() => {
-            // Focus on the input in the current plan
-            // This will be handled by exposing the input ref from TodaysPlan component
-          }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="add" size={24} color={Colors.primary[600]} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Interface */}
-      <View style={styles.tabContainer}>
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'today' && styles.activeTab]}
-            onPress={() => setActiveTab('today')}
-            activeOpacity={0.7}
-          >
-            <Ionicons 
-              name="calendar" 
-              size={16} 
-              color={activeTab === 'today' ? Colors.primary[600] : Colors.neutral[600]} 
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tabText, activeTab === 'today' && styles.activeTabText]}>
-              Today
-            </Text>
-            {getTodaysPlan()?.entries.length ? (
-              <View style={styles.tabBadge}>
-                <Text style={styles.tabBadgeText}>{getTodaysPlan()?.entries.length}</Text>
-              </View>
-            ) : null}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'tomorrow' && styles.activeTab]}
-            onPress={() => setActiveTab('tomorrow')}
-            activeOpacity={0.7}
-          >
-            <Ionicons 
-              name="moon" 
-              size={16} 
-              color={activeTab === 'tomorrow' ? Colors.primary[600] : Colors.neutral[600]} 
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tabText, activeTab === 'tomorrow' && styles.activeTabText]}>
-              Tomorrow
-            </Text>
-            {getTomorrowsPlan()?.entries.length ? (
-              <View style={styles.tabBadge}>
-                <Text style={styles.tabBadgeText}>{getTomorrowsPlan()?.entries.length}</Text>
-              </View>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView 
-        style={styles.scrollContainer}
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.neutral[100] }}>
+      <KeyboardAwareScrollView
+        ref={scrollViewRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: isKeyboardVisible ? 200 : 50 }}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        enableOnAndroid={true}
+        extraScrollHeight={50}
+        enableAutomaticScroll={false}
+        onKeyboardWillShow={(frames) => {
+          setIsKeyboardVisible(true);
+        }}
+        onKeyboardWillHide={(frames) => {
+          setIsKeyboardVisible(false);
+        }}
       >
-        <TodaysPlan 
-          dailyPlan={getCurrentPlan()}
-          onPlanItemToggle={handlePlanItemToggle}
-          onSmartAddPlanItem={handleSmartAddPlanItem}
-          onEditPlanItem={handleEditPlanItem}
-          onDeletePlanItem={handleDeletePlanItem}
-          mode={activeTab}
-          onMoveUnfinishedToTomorrow={activeTab === 'today' ? handleMoveUnfinishedToTomorrow : undefined}
-        />
-      </ScrollView>
+          <View style={styles.containerContent}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Today</Text>
+              <TouchableOpacity 
+                style={styles.quickAddButton}
+                onPress={() => {
+                  // Focus on the input in the current plan
+                  // This will be handled by exposing the input ref from TodaysPlan component
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add" size={24} color={Colors.primary[600]} />
+              </TouchableOpacity>
+            </View>
 
+            {/* Tab Interface */}
+            <View style={styles.tabContainer}>
+              <View style={styles.tabRow}>
+                <TouchableOpacity
+                  style={[styles.tab, activeTab === 'today' && styles.activeTab]}
+                  onPress={() => setActiveTab('today')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name="calendar" 
+                    size={16} 
+                    color={activeTab === 'today' ? Colors.primary[600] : Colors.neutral[600]} 
+                    style={styles.tabIcon}
+                  />
+                  <Text style={[styles.tabText, activeTab === 'today' && styles.activeTabText]}>
+                    Today
+                  </Text>
+                  {getTodaysPlan()?.entries.length ? (
+                    <View style={styles.tabBadge}>
+                      <Text style={styles.tabBadgeText}>{getTodaysPlan()?.entries.length}</Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, activeTab === 'tomorrow' && styles.activeTab]}
+                  onPress={() => setActiveTab('tomorrow')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name="moon" 
+                    size={16} 
+                    color={activeTab === 'tomorrow' ? Colors.primary[600] : Colors.neutral[600]} 
+                    style={styles.tabIcon}
+                  />
+                  <Text style={[styles.tabText, activeTab === 'tomorrow' && styles.activeTabText]}>
+                    Tomorrow
+                  </Text>
+                  {getTomorrowsPlan()?.entries.length ? (
+                    <View style={styles.tabBadge}>
+                      <Text style={styles.tabBadgeText}>{getTomorrowsPlan()?.entries.length}</Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.planContent}>
+              <TodaysPlan 
+                dailyPlan={getCurrentPlan()}
+                onPlanItemToggle={handlePlanItemToggle}
+                onSmartAddPlanItem={handleSmartAddPlanItem}
+                onEditPlanItem={handleEditPlanItem}
+                onDeletePlanItem={handleDeletePlanItem}
+                mode={activeTab}
+                onMoveUnfinishedToTomorrow={activeTab === 'today' ? handleMoveUnfinishedToTomorrow : undefined}
+              />
+              
+              {/* Only show TimeAwarePrompt on the Today tab */}
+              {activeTab === 'today' && <TimeAwarePrompt scrollViewRef={scrollViewRef} />}
+            </View>
+          </View>
+        </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
@@ -229,6 +249,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.neutral[100],
+  },
+  containerContent: {
+    // flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -254,12 +277,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primary[200],
   },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
+  planContent: {
     padding: Spacing.xl,
-    paddingBottom: Spacing['5xl'],
+    flex: 1,
   },
   tabContainer: {
     paddingHorizontal: Spacing.xl,
